@@ -375,11 +375,28 @@ library("imputeTS")
 
 for (i in 1:N){
     for (v in seq_along(emaLabels)){
-      dat_imputed[dat_imputed$participantID == i, 5+v] <- na_kalman(dat[dat_imputed$participantID == i, 5+v])
+      if (length(unique(na.omit(dat[dat_imputed$participantID == i, 5+v]))) > 1){
+        dat_imputed[dat_imputed$participantID == i, 5+v] <- na_kalman(dat[dat_imputed$participantID == i, 5+v]) # throws error in some cases, but seems to work nontheless. 
+        cat("<- T ","ID",i,"var",v, sep = "") # used for debugging
+      } else  dat_imputed[dat_imputed$participantID == i, 5+v] <- unique(na.omit(dat[dat_imputed$participantID == i, 5+v]))
+        cat("<- F","ID",i,"var",v, sep = "") #used for debugging
+
     }
 }
-
 dat <- dat_imputed
+
+#################################################################################################################################
+glimpse(dat_imputed)
+glimpse(dat)
+
+##### possible convergence problem: 'optim' gave code = 52 and message ‘ERROR: ABNORMAL_TERMINATION_IN_LNSRCH’            [,1]      [,2]
+# error is thrown when assigning 
+i = 2
+v = 3
+# debug eg T ID3var2
+i = 3
+v = 2
+cbind( dat_imputed[dat_imputed$participantID == i, 5+v] , na_kalman(dat[dat_imputed$participantID == i, 5+v]))
 ```
 
 
@@ -394,7 +411,7 @@ Lag-1 VAR models estimate temporal associations by predicting each variable by a
  recode network variables so that more score is worse (eg recode positive affect and daily functioning to reverse)
 --->
 
-```{r}
+```{r Networks}
 # compute composite variables for positive affect, negative affect, and stress severity
 dat$PosAffect_sum <- dat$alert + dat$active + dat$attentive + dat$determined + dat$inspired
 dat$NegAffect_sum <- dat$afraid + dat$nervous + dat$hostile + dat$ashamed + dat$upset
@@ -408,6 +425,8 @@ library("graphicalVAR")
 library("qgraph")
 library("OpenMx")
 
+# define output data frame
+
 for (i in 1:N){ # per person
 # fit network t1
 dat_T1 <- filter(dat, participantID==i, day.response %in% 1:50)
@@ -420,17 +439,25 @@ dat_T2 <- select(dat_T2, day.response, PosAffect_sum, NegAffect_sum, StressSev_s
 netw_T1 <- graphicalVAR(dat_T1, beepvar = "day.response")
 netw_T2 <- graphicalVAR(dat_T2, beepvar = "day.response")
 
+# build in option for empty networks and non-converging networks
+
+
+# kappa matrix  is partial contemp corr PCC
+# beta matrix is partical directed correlations PDC
+# 
 # compute comparison metric, see Mansueto code for examples
 # vechs(cont) for contemp netw
 }
-
+plot(netw_T1)
+netw_T1$PCC
+vechs(netw_T1$PCC)
+cor(vechs(netw_T1$PCC), vechs(netw_T2$PCC))
 # plot networks
 # Names for the Plot :
- names <- c("Positive Affect", "Negative Affect", "Stress Severity", 
-            "Tasks")  # to do: add , Rank1, Rank2 names
+names <- c("PA", "NA", "Stress", "Tasks")  # to do: add , Rank1, Rank2 names
 
-qgraph(res_GVAR$fixedPDC,  layout = "circle", nonsig = "hide", theme = "colorblind", title = "Temporal",
-       labels = vars, vsize = 20,  asize = 10, mar = c(5,5,5,5))
+# for plots, fix layout and node strength for comparability
+qgraph(netw_T1$PCC,  layout = "circle", nonsig = "hide", theme = "colorblind", title = "Contemporaneous", labels = names, vsize = 10,  asize = 10, mar = c(5,5,5,5)) 
 ```
 
 #### Network comparisons
