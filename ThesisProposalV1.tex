@@ -1,0 +1,584 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+  english,
+  man]{apa6}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+  \usepackage{amssymb}
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Within-person replicability of idiographic networks},
+  pdfauthor={Ricarda K. K. Proppert1 \& Eiko I. Fried1},
+  pdflang={en-EN},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% Make \paragraph and \subparagraph free-standing
+\ifx\paragraph\undefined\else
+  \let\oldparagraph\paragraph
+  \renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+  \let\oldsubparagraph\subparagraph
+  \renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+% Manuscript styling
+\usepackage{upgreek}
+\captionsetup{font=singlespacing,justification=justified}
+
+% Table formatting
+\usepackage{longtable}
+\usepackage{lscape}
+% \usepackage[counterclockwise]{rotating}   % Landscape page setup for large tables
+\usepackage{multirow}		% Table styling
+\usepackage{tabularx}		% Control Column width
+\usepackage[flushleft]{threeparttable}	% Allows for three part tables with a specified notes section
+\usepackage{threeparttablex}            % Lets threeparttable work with longtable
+
+% Create new environments so endfloat can handle them
+% \newenvironment{ltable}
+%   {\begin{landscape}\begin{center}\begin{threeparttable}}
+%   {\end{threeparttable}\end{center}\end{landscape}}
+\newenvironment{lltable}{\begin{landscape}\begin{center}\begin{ThreePartTable}}{\end{ThreePartTable}\end{center}\end{landscape}}
+
+% Enables adjusting longtable caption width to table width
+% Solution found at http://golatex.de/longtable-mit-caption-so-breit-wie-die-tabelle-t15767.html
+\makeatletter
+\newcommand\LastLTentrywidth{1em}
+\newlength\longtablewidth
+\setlength{\longtablewidth}{1in}
+\newcommand{\getlongtablewidth}{\begingroup \ifcsname LT@\roman{LT@tables}\endcsname \global\longtablewidth=0pt \renewcommand{\LT@entry}[2]{\global\advance\longtablewidth by ##2\relax\gdef\LastLTentrywidth{##2}}\@nameuse{LT@\roman{LT@tables}} \fi \endgroup}
+
+% \setlength{\parindent}{0.5in}
+% \setlength{\parskip}{0pt plus 0pt minus 0pt}
+
+% Overwrite redefinition of paragraph and subparagraph by the default LaTeX template
+% See https://github.com/crsh/papaja/issues/292
+\makeatletter
+\renewcommand{\paragraph}{\@startsection{paragraph}{4}{\parindent}%
+  {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+  {-1em}%
+  {\normalfont\normalsize\bfseries\itshape\typesectitle}}
+
+\renewcommand{\subparagraph}[1]{\@startsection{subparagraph}{5}{1em}%
+  {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+  {-\z@\relax}%
+  {\normalfont\normalsize\itshape\hspace{\parindent}{#1}\textit{\addperi}}{\relax}}
+\makeatother
+
+% \usepackage{etoolbox}
+\makeatletter
+\patchcmd{\HyOrg@maketitle}
+  {\section{\normalfont\normalsize\abstractname}}
+  {\section*{\normalfont\normalsize\abstractname}}
+  {}{\typeout{Failed to patch abstract.}}
+\patchcmd{\HyOrg@maketitle}
+  {\section{\protect\normalfont{\@title}}}
+  {\section*{\protect\normalfont{\@title}}}
+  {}{\typeout{Failed to patch title.}}
+\makeatother
+\shorttitle{}
+\keywords{\newline\indent Word count: }
+\DeclareDelayedFloatFlavor{ThreePartTable}{table}
+\DeclareDelayedFloatFlavor{lltable}{table}
+\DeclareDelayedFloatFlavor*{longtable}{table}
+\makeatletter
+\renewcommand{\efloat@iwrite}[1]{\immediate\expandafter\protected@write\csname efloat@post#1\endcsname{}}
+\makeatother
+\usepackage{lineno}
+
+\linenumbers
+\usepackage{csquotes}
+\ifxetex
+  % Load polyglossia as late as possible: uses bidi with RTL langages (e.g. Hebrew, Arabic)
+  \usepackage{polyglossia}
+  \setmainlanguage[]{english}
+\else
+  \usepackage[shorthands=off,main=english]{babel}
+\fi
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newenvironment{CSLReferences}[2] % #1 hanging-ident, #2 entry spacing
+ {% don't indent paragraphs
+  \setlength{\parindent}{0pt}
+  % turn on hanging indent if param 1 is 1
+  \ifodd #1 \everypar{\setlength{\hangindent}{\cslhangindent}}\ignorespaces\fi
+  % set entry spacing
+  \ifnum #2 > 0
+  \setlength{\parskip}{#2\baselineskip}
+  \fi
+ }%
+ {}
+\usepackage{calc}
+\newcommand{\CSLBlock}[1]{#1\hfill\break}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{#1}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{#1}\break}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+
+\title{Within-person replicability of idiographic networks}
+\author{Ricarda K. K. Proppert\textsuperscript{1} \& Eiko I. Fried\textsuperscript{1}}
+\date{}
+
+
+\authornote{
+
+Correspondence concerning this article should be addressed to Ricarda K. K. Proppert, . E-mail: \href{mailto:ricarda.proppert@gmail.com}{\nolinkurl{ricarda.proppert@gmail.com}}
+
+}
+
+\affiliation{\vspace{0.5cm}\textsuperscript{1} Clinical Psychology, Leiden University, The Netherlands}
+
+\abstract{
+Evidence-based mental health programs have long conceptualized mental disorders in terms of interactions between thoughts, feelings, behaviours and external factors.
+
+Idiographic network models are a relatively novel way of modeling such longitudinal intra-individual symptom interactions. However, these methods are not without limitations, and concerns have been raised about the replicability and stability of estimated networks.
+
+While methods to assess network replicability have been developed for cross-sectional data, no such method exists for single-subject data. The extend to which idiographic networks are stable, or vary over time, is unknown.
+
+In the current work, we reanalyse daily symptom records of people with personality disorders to explore the replicability of idiographic networks over time, as well as the degree to which network replicability varies across individuals. We further explore factors which may relate to inter-individual variation in replicability using predictive LASSO regression.
+}
+
+
+
+\begin{document}
+\maketitle
+
+\hypertarget{introduction}{%
+\section{Introduction}\label{introduction}}
+
+\hypertarget{idiographic-networks}{%
+\subsection{Idiographic networks}\label{idiographic-networks}}
+
+Idiographic network models are of growing interest to clinical psychology because they may address two recently voiced calls in clinical psychology:
+
+Firstly, there seems to be a need for psychological research to re-orient towards idiographic methods that study intra-individual processes as opposed to group-level differences (Molenaar, 2004).
+
+Secondly, scholars are proposing a paradigm shift from reductionism towards studying the complexity of psychological phenomena. The Network theory of mental disorders (Borsboom \& Cramer, 2013; Cramer, Waldorp, Maas, \& Borsboom, 2010) attempts to integrate psychology with insights and methods from complexity science, proposing a novel but well-received theoretical framework to study and understand the underpinnings of psychopathology.
+
+It conceptualizes psychopathology as an emergent state of dynamically interacting psychological symptoms, as well as factors external to this system. This account seems closely aligned with established clinical practices where informal case conceptualizations in form of path diagrams are used to describe the proposed mechanisms of a given disorder as a dysfunctional cycle of mutually interacting stressors, thoughts, feelings and behaviors.
+
+With the ongoing development of statistical methods to visualize and quantify such system's structures and behaviors, called psychological networks or psychonetrics (REF), an increasing body of research is now applying this framework to study symptom networks in people with mental disorders.
+
+Psychological networks consist of elements (nodes) and their interactions (edges), forming a complex system. Nodes represent psychological or other variables, such as symptoms, stressors, or behaviors. Edges represent relationships between these variables. These relationships may be directed or undirected and are thought result from of a multitude of mechanisms giving rise to their association, which may not necessarily be known or defined.
+
+Most of the psychological network research so far is based on group-level analyses and cross-sectional comparisons, mainly for practical reasons such as availability of existing data-sets and power constraints. There is, however, a growing interest in personalized network models of intra-individual symptom dynamics, and their potential to inform and monitor mental health care (eg., Frumkin, Piccirillo, Beck, Grossman, and Rodebaugh (2020); Howe, Bosley, and Fisher (2020); Caviglia and Coleman (2016); Hoffart and Johnson (2020)).
+
+Explain estimation procedures and assumptions in more detail:
+
+\begin{itemize}
+\tightlist
+\item
+  explain graphicalVAR estimation
+\item
+  stationarity
+\item
+  multivariate normality
+\item
+  no measurement error
+\item
+  mention related methods that we do not use here, and why (mlVAR, baysian, all the other not so networky idioraphic models (see idio review)
+\end{itemize}
+
+\hypertarget{current-challenges-in-research-on-idiographic-networks}{%
+\subsection{Current challenges in research on idiographic networks}\label{current-challenges-in-research-on-idiographic-networks}}
+
+\begin{itemize}
+\item
+  require high power, which is difficult to obtain in longitudinal N=1 study (burdensome)
+\item
+  even if power is high and networks can be estimated reliably, longitudinal stability of networks is unknown (ie how they generalize to different time within same individual)
+\item
+  stability of estimates is an important issue (beyond scopoe here but explain this as important limitation)
+\item
+  even if estimates stable, replicability not warranted:
+\item
+  How stable is the data generating process we try to capture? Is this the process of interest? Is it malleable? Phase transitions?
+\item
+  feasibility
+\end{itemize}
+
+\hypertarget{implications-of-high-stability}{%
+\subsubsection{Implications of high stability}\label{implications-of-high-stability}}
+
+\begin{itemize}
+\tightlist
+\item
+  would mean that this line of research is feasible
+\item
+  can we get methodological recommendations out of this, eg. on design of studies, planned missingness, feasibility of daily as opposed to more frequent prompts and harnessing benefits of that
+\end{itemize}
+
+\hypertarget{implications-of-low-stability}{%
+\subsubsection{Implications of low stability}\label{implications-of-low-stability}}
+
+\begin{itemize}
+\tightlist
+\item
+  underpowered? (in)stability of estimates?
+\item
+  warrants caution regarding the inferences we draw (momentary impression of item correlations in certain period of time vs.~stable process which extends beyond this period and could inform interventions (TODO: related to predictive value of networks?)
+\item
+  measurement error assumption: are we just capturing noise? (unlikely but still an issue to think about)
+\item
+  is extending measurement period instead of increasing frequency a good solution, eg. with planned missingness, or is non-stationarity and low replicability too much of concern?
+\end{itemize}
+
+\hypertarget{research-questions}{%
+\subsection{Research Questions}\label{research-questions}}
+
+\begin{itemize}
+\tightlist
+\item
+  Goal of this work: initial impression of intra-individual replicability of idiographic networks
+\end{itemize}
+
+RQ1: How stable are estimated idiogr network structures over time?
+
+RQ2: What factors may predict inter-individual variation in intra-individual replicability?
+
+\begin{itemize}
+\item
+  speculate about some people's experiences changing more over the course of weeks than others, eg. due to underlying conditions, comorbidity, being in treatment or not, times of extreme stress
+\item
+  look for any initial evidence for or against this possibility
+\end{itemize}
+
+\hypertarget{methods}{%
+\section{Methods}\label{methods}}
+
+A recent simulation study (preprint Mansueto), \ldots{} required power would be bla.
+
+The current work aims to add to this line of research by testing the stability of personalized networks under clinically realistic constraints. To this end, we re-analyze 100-days long daily diary data collected in a clinical sample with personality disorders (cite Aidan), which was kindly made available by the original authors. We assume this data set to be representative of a clinically realistic sampling scheme for two reasons: Firstly, measuring symptoms daily as opposed to more often (eg. 4 times daily, as often used in ESM), is an already established method to enhance clinical diagnosis of certain disorders (find info), and even used as therapeutic technique in evidence-based clinical treatments (tracking mood to better understand ones emotional life, find source?). Secondly, daily measurements with a timescale of 1 day in between measuements may be desirable for modeling variables that typically fluctuate on a daily level only and are more within the control of the patient, such as sleep or exercise. Furthermore, the time frame of 100 days may strike a balance of being at the lower end of what may be needed for sufficient statistical power, and at the higher end of what may be an acceptable burden to pose on clinically distressed patients, as well as realistic for typical treatment durations.
+
+\hypertarget{data-set}{%
+\subsection{Data Set}\label{data-set}}
+
+A summarized version of the data are published HERE, an overview of all available variables can be found in Appendix A.
+
+The original study design by which the data were collected are described in detail in previous publications (Aidan G. C. Wright, Beltz, Gates, Molenaar, \& Simms, 2015; Aidan G. C. Wright, Hopwood, \& Simms, 2015; Aidan G. C. Wright \& Simms, n.d.). The study investigated daily dynamics in affect, stress, andexpressions of personality disorder, along with some lifestyle variables such as self-reported sleep, drug and alcohol use, and overall functioning. Participants were recruited from an ongoing clinical study (N=628, REFS SIMMS Goldberg Welte 2014; simms et al 2011) that targeted individuals who had received psychiatric treatment within the previous two years, recruited via flyers distributed at mental health clinics across Western New York, USA. They were invited for study participation if they met the diagnostic requirements of any personality disorder during the initial structured clinical interview conducted for the parent study (SCID-II, TODO REF), and if they had daily internet access via a computer or mobile device. 116 participants were initially enrolled, of which 101 participants completed at least 30 of the desired 100 daily measurements.
+
+In selecting this data set for the present study, we balanced three main considerations: Availability: A shorter version of this data are openly available, and the original author expressed their willingness to share the full data in response to a broad request on twitter (TODO: link the post).
+
+We chose this data set for this study for three main reasons: It was one of the few available clinical longitudinal data sets we could find, a summary data set had already been published, and we believe the design to be a good representation of a feasible clinical setting: Daily records are an already well-established method for enhancong diagnosis and monitoring patients daily lives, and asks less burden of participants compared to more intensive EMA methods. Secondly, the duration of 100-days consistent data collection was long enough so that splitting the data seemed feasible. Recorded variables - although being collected in a sample of people diagnosed with a personality disorder - were general enough to not be restricted to a certain mental disorder.
+
+Representativeness of realistic clinical designs: Applications of idiographic network models are currently scarce, mainly because they require well-powered data that necessarily come at increased burden to the participants. To improve power in single-subject longitudinal designs, such as ESM / EMA or daily diary studies, Participants are required to either provide more intensive momentary data, or provide less intensive (eg., daily) records over a longer period. Specific power requirements for idiographic networks are still unknown. Some simulation work suggests that \ldots.. , depending on the number of estimated nodes and amount of missingness. Given that daily diaries a more established method of data collection in clinical research and mental health care, and assuming that it poses less burden on participants compared to more intensive sampling frames, we hope that this data is at the higher end of what seems realistic and feasible for future study designs and applications. Simultaneously, although no precise power estimates are currently available, we hope that meets the minimum power needed for our analyses (up to 50 data points per individual, per network).
+
+\begin{itemize}
+\item
+  methodological assumptions (study duration, sample size, stationarity of variables.
+\item
+  Participants completed daily measurements over the course of 100 consecutive days. Participants completed surveys at roughly the same time each night, depending on their individual schedule. Therefore, therefore, this data set is expected to meet the assumption of roughly equal time intervals in between measurements (REF mlVAR).
+\end{itemize}
+
+Participants started measurements asynchronically, so that no sample-wide history effects should affect our results on longitudinal within-person stability of esitmated networks.
+
+Furthermore, the original authors reported stability of means and variances of expressions of daily psychopathology in (REF), so that we expect most variables to meet the assumption of stationarity (REF).
+
+\hypertarget{analysis-plan}{%
+\subsection{Analysis plan}\label{analysis-plan}}
+
+\hypertarget{pre-processing}{%
+\subsubsection{Pre-processing:}\label{pre-processing}}
+
+To prepare the network estimation process, data will be explored and if necessary transformed according to the following steps.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\tightlist
+\item
+  Inspect missing data:
+\end{enumerate}
+
+\begin{itemize}
+\item
+  exclude participants with fewer than 30 responses as done in REF original publications
+\item
+  Split data into first 50days (T1) and last 50 days (T2)
+\item
+  Compute levels of missingness per subject per item per T
+\item
+  Per subject, per variable, per T, compute:
+
+  \begin{itemize}
+  \item
+    Mean
+  \item
+    Variance
+  \item
+    Skew
+  \item
+    number of missing responses
+  \end{itemize}
+\item
+  Per subject, exclude items with less than 25 responses in either T1 or T2\\
+  As we aim to compare the network structures of T1 and T2, participants should have provided sufficient data in both time periods. Even though imputation using the Kalman filter has been shown to recover true network structures well under mcar assumption, but Mansueto suggests that performance declined dramatically at 50\% levels of missingness (REF) in network with 75 time points.
+\item
+  Impute remaining missing data using Kalman filter (REF Harvey,A.C.(1990). Forecasting, structural time series models and the Kalman filter.Cambridge,UK:Cambridgeuniversity press., REF Code Mansueto)
+\item
+  Compute composite variables:
+
+  \begin{itemize}
+  \item
+    StressSUM = Sum(Stress1:Stress7)
+  \item
+    Positive Affect = Mean((Active, Alter, Attentive, Determined, Inspired)
+  \item
+    Negative Affect = Mean(
+  \end{itemize}
+\item
+  Per subject, retrieve 20 items with highest variance (T1 and T2)
+\item
+  Per subject, select 6 variables subjectively optimizing the following aspects:
+
+  \begin{itemize}
+  \item
+    few missing (imputed) responses
+  \item
+    high variance which seems realistic and not due to measurement error
+  \item
+    little skew, so no transformation may be needed
+  \item
+    mean and variance roughly equal at T1 and T2 (so no obvious signs of non-stationarity
+  \item
+    defendable theoretical relationship (lagged or contemporaneous) with other selected items
+  \end{itemize}
+\item
+  Inspect non-stationarity of selected items and detrend linear effects of time (on T1 and T2 together so this does not affect comparisons)
+\item
+  Inspect skew of selected items and transform to normality if this seems necessary
+\end{itemize}
+
+\hypertarget{network-estimation}{%
+\subsubsection{Network estimation}\label{network-estimation}}
+
+\begin{itemize}
+\item
+  estimate symptom networks per subject, per time frame:
+\item
+  gVar() package
+\item
+  regularized networks: sparse, err on side of Type 1 errors in attempt to not overfit and increase replicability
+\item
+  how deal with empty networks and their cor???\\
+  What to do with too many empty networks?
+\item
+  tuning parameter allowing for more false positives (so probably cor lower then) --\textgreater{}
+\end{itemize}
+
+\hypertarget{estimate-network-replicability}{%
+\subsubsection{Estimate network replicability:}\label{estimate-network-replicability}}
+
+\hypertarget{exploratory-analysis-of-contributing-factors}{%
+\subsubsection{Exploratory analysis of contributing factors:}\label{exploratory-analysis-of-contributing-factors}}
+
+\begin{itemize}
+\item
+  level of initial missingness (because this influences performance of Kalman Filter)
+\item
+  being in treatment
+\item
+  number of comorbid diagnoses
+\item
+  type of PD?
+\end{itemize}
+
+Models will be estimated using the open-source package graphicalVAR (\emph{graphicalVAR}, n.d.)(TODO Epskamp, 2017) in which networks are regularized using penalized maximum likelihood estimation (Abegaz \& Wit, 2013).
+
+Other methods to estimate idiographic network models exist, which eacht their own benefits. \ldots{} In contrast to multilevel network estimation, which may be preferred for it's ability to estimate indivududal networks while borrowing infomation from the group-level and requires less data points (Epskamp, Waldorp, Mõttus, \& Borsboom, 2018). However, in multilevel modeling, individual networks are restricted to have the same structure across individuals, which is an unlikely assumption in our heterogeneous sample.
+
+Why predictive LASSO regression:
+
+\begin{itemize}
+\item
+  problem of predictor selection better approached by LASSO than by step-wise regression :)
+\item
+  clearer interpretation of the models practical value: out-of sample validation in holdout sample to give realistic impression of model performance vs overfitting
+\end{itemize}
+
+Things to control for:
+
+\begin{itemize}
+\item
+  nr of missing / imputed data points per individual
+\item
+  if we have to vary this across people: nr of included nodes, tuning parameter
+\item
+  other characteristics of included variables? (variance, non-stationarity,
+\end{itemize}
+
+\hypertarget{potential-issues-and-solutions}{%
+\subsubsection{Potential issues and solutions:}\label{potential-issues-and-solutions}}
+
+\hypertarget{results}{%
+\section{Results}\label{results}}
+
+\hypertarget{network-estimation-1}{%
+\subsubsection{Network estimation}\label{network-estimation-1}}
+
+\begin{itemize}
+\item
+  which estimation methods were tried
+\item
+  How did they perform, what needed to be adjusted
+\end{itemize}
+
+\hypertarget{intra-individual-network-replicability-rq1}{%
+\subsubsection{Intra-individual network replicability (RQ1)}\label{intra-individual-network-replicability-rq1}}
+
+\hypertarget{inter-individual-variation-in-network-replicability-rq2}{%
+\subsubsection{Inter-individual variation in network replicability (RQ2)}\label{inter-individual-variation-in-network-replicability-rq2}}
+
+\hypertarget{discussion}{%
+\section{Discussion}\label{discussion}}
+
+\hypertarget{limitations}{%
+\subsubsection{Limitations}\label{limitations}}
+
+\begin{itemize}
+\item
+  ACCURACY OF ESTIMATES UNKNOWN: Uncertainty around parameter estimates is unknown. We cannot know whether dissimilarity of networks is due to unreliable estimates (too low power, measurement error) or because underlying data-generating process changes (non-stationarity, important variables missing from network)
+\item
+  subjective selection of included variables, individual estimates in this study should not be interpreted on substantive grounds, variables were mostly selected for their statistical properties in order to improve power
+\item
+  limitations of this data set for this research q, and constraints to generalizability (population, designs, time frame, estimation method)
+\item
+  We focus on similarity of global network structure, but there are many more ways to descibe and interpret networks which may or may not be relevant for replicability:
+\item
+  network comparison test
+\item
+  predictive networks models
+\item
+  sensitivity and specificity of recovered edges if true network (assumed to be) known
+\item
+  Imputation assumes MCAR but hard to check this assumption here
+\item
+  important assumption made by (idiographic) network models is that constructs were measured without error.
+\end{itemize}
+
+\hypertarget{implications}{%
+\subsubsection{Implications}\label{implications}}
+
+\begin{itemize}
+\tightlist
+\item
+  relate to stationarity assumption
+\item
+  relate to idea of monitoring change, critical slowing down, phase transitions, ROM
+\item
+  implications for feasibility of this approach for research and applications
+\item
+  propose ideas for further research on this
+\end{itemize}
+
+\hypertarget{conclusion}{%
+\subsubsection{Conclusion}\label{conclusion}}
+
+\newpage
+
+\hypertarget{references}{%
+\section{References}\label{references}}
+
+\begingroup
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}
+
+\hypertarget{refs}{}
+\begin{CSLReferences}{1}{0}
+\leavevmode\hypertarget{ref-AbegazWit2013}{}%
+Abegaz, F., \& Wit, E. (2013). Sparse time series chain graphical models for reconstructing genetic networks. \emph{Biostatistics}, \emph{14}(3), 586--599. \url{https://doi.org/10.1093/biostatistics/kxt005}
+
+\leavevmode\hypertarget{ref-BorsboomCramer2013}{}%
+Borsboom, D., \& Cramer, A. O. J. (2013). Network analysis: An integrative approach to the structure of psychopathology. \emph{Annual Review of Clinical Psychology}, \emph{9}(1), 91--121. \url{https://doi.org/10.1146/annurev-clinpsy-050212-185608}
+
+\leavevmode\hypertarget{ref-CavigliaColeman2016}{}%
+Caviglia, G., \& Coleman, N. (2016). Idiographic network visualizations. \emph{Leonardo}, \emph{49}(5), 447--447. \url{https://doi.org/10.1162/LEON_a_01267}
+
+\leavevmode\hypertarget{ref-CramerEtAl2010}{}%
+Cramer, A. O. J., Waldorp, L. J., Maas, H. L. J. van der, \& Borsboom, D. (2010). Comorbidity: A network perspective. \emph{Behavioral and Brain Sciences}, \emph{33}(2-3), 137--150. \url{https://doi.org/10.1017/S0140525X09991567}
+
+\leavevmode\hypertarget{ref-EpskampEtAl2018b}{}%
+Epskamp, S., Waldorp, L. J., Mõttus, R., \& Borsboom, D. (2018). The gaussian graphical model in cross-sectional and time-series data. \emph{Multivariate Behavioral Research}, \emph{53}(4), 453--480. \url{https://doi.org/10.1080/00273171.2018.1454823}
+
+\leavevmode\hypertarget{ref-FrumkinEtAl2020}{}%
+Frumkin, M. R., Piccirillo, M. L., Beck, E. D., Grossman, J. T., \& Rodebaugh, T. L. (2020). Feasibility and utility of idiographic models in the clinic: A pilot study. \emph{Psychotherapy Research}, \emph{0}(0), 1--15. \url{https://doi.org/10.1080/10503307.2020.1805133}
+
+\leavevmode\hypertarget{ref-zotero-7045}{}%
+\emph{graphicalVAR: Graphical VAR for experience sampling data}. (n.d.). Comprehensive. Retrieved from \url{https://CRAN.R-project.org/package=graphicalVAR}
+
+\leavevmode\hypertarget{ref-HoffartJohnson2020}{}%
+Hoffart, A., \& Johnson, S. U. (2020). Within-person networks of clinical features of social anxiety disorder during cognitive and interpersonal therapy. \emph{Journal of Anxiety Disorders}, \emph{76}, 102312. \url{https://doi.org/10.1016/j.janxdis.2020.102312}
+
+\leavevmode\hypertarget{ref-HoweEtAl2020}{}%
+Howe, E., Bosley, H. G., \& Fisher, A. J. (2020). Idiographic network analysis of discrete mood states prior to treatment. \emph{Counselling and Psychotherapy Research}, \emph{20}(3), 470--478. https://doi.org/\url{https://doi.org/10.1002/capr.12295}
+
+\leavevmode\hypertarget{ref-Molenaar2004}{}%
+Molenaar, P. C. M. (2004). A manifesto on psychology as idiographic science: Bringing the person back into scientific psychology, this time forever. \emph{Measurement: Interdisciplinary Research \& Perspective}, \emph{2}(4), 201--218. \url{https://doi.org/10.1207/s15366359mea0204_1}
+
+\leavevmode\hypertarget{ref-WrightEtAl2015a}{}%
+Wright, Aidan G. C., Beltz, A. M., Gates, K. M., Molenaar, P. C. M., \& Simms, L. J. (2015). Examining the dynamic structure of daily internalizing and externalizing behavior at multiple levels of analysis. \emph{Frontiers in Psychology}, \emph{6}. \url{https://doi.org/10.3389/fpsyg.2015.01914}
+
+\leavevmode\hypertarget{ref-WrightEtAl2015}{}%
+Wright, Aidan G. C., Hopwood, C. J., \& Simms, L. J. (2015). Daily interpersonal and affective dynamics in personality disorder. \emph{Journal of Personality Disorders}, \emph{29}(4), 503--525. \url{https://doi.org/10.1521/pedi.2015.29.4.503}
+
+\leavevmode\hypertarget{ref-WrightSimms}{}%
+Wright, Aidan G. C., \& Simms, L. J. (n.d.). \emph{Stability and fluctuation of personality disorder features in daily life}. 16.
+
+\end{CSLReferences}
+
+\endgroup
+
+
+\end{document}
