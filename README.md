@@ -1,4 +1,4 @@
-Master thesis project
+## Master thesis project: Research Master Clinical and Health Psychology, Leiden University
 
 Ricarda Proppert, s1348981
 
