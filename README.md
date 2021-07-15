@@ -4,11 +4,10 @@ Ricarda Proppert, s1348981
 
 Supervisor: Eiko Fried, Leiden University
 
-# Data
-dd100-proppert - Full data; Aidan Wright 100 day daily diary study
+# data
+dd100-proppert.csv  - Full original data; Aidan Wright  et al., 100 day daily diary study
 
-dd100-proppert_nr1 - Participant Nr 1 for preregistration
+# figures: contains copies of all generated plots
 
-# Preregistration
-
-# Thesis drafts
+# archive
+- contains previous proposal and manuscript drafts
