@@ -72,10 +72,10 @@ library("OpenMx")
 
 # Notation: 
 # ---------
-#     data:   full data set used. 
+#     data:   full data set. Operations on the complete data set ()
 #             In chunks that manipulate the whole data set (eg., imputation, detrending) I reassign the manipulated data object to 'data', so that results can easily be rerun on not detrended / not imputed data by simply not evaluating the previous code chunk
-#     p:      participant (itiration in loop)
-#     v:      variable (itiration in loop)
+#     p:      participant (iteration in loop)
+#     v:      variable (iteration in loop)
 #     d:      temporary data object in loop
 
 
@@ -173,7 +173,6 @@ They reported high consistency among contemporaneous associations, low consisten
 
 <!-- BeckJackson2020 use GIMME and no detrending, super helpful prereg and code on osf + gh -->
 
-`
 <!--
 ## Current challenges in research on idiographic networks
 
@@ -233,6 +232,7 @@ To assess intra-individual stability of idiographic networks, we will fit separa
 Network structures of each individual's first vs. last 50 days of measurements will be compared by correlating estimated path estimates, with high correlation indicating high temporal stability.
 Finally, person-specific antecedents and statistical factors will be tested for their ability to predict interindividual variation in network stability using predictive LASSO regression.
 
+# Methods
 ## Data Set
 
 A summarized version of the data are published HERE, an overview of all available variables can be found in Appendix A.
@@ -254,11 +254,9 @@ Participants started measurements asynchronically, so that no sample-wide histor
 
 <!-- Representativeness of realistic clinical designs: Applications of idiographic network models are currently scarce, mainly because they require well-powered data that necessarily come at increased burden to the participants. To improve power in single-subject longitudinal designs, such as ESM / EMA or daily diary studies, Participants are required to either provide more intensive momentary data, or provide less intensive (eg., daily) records over a longer period. Specific power requirements for idiographic networks are still unknown. Some simulation work suggests that ..... , depending on the number of estimated nodes and amount of missingness. Given that daily diaries a more established method of data collection in clinical research and mental health care, and assuming that it poses less burden on participants compared to more intensive sampling frames, we hope that this data is at the higher end of what seems realistic and feasible for future study designs and applications. Simultaneously, although no precise power estimates are currently available, we hope that meets the minimum power needed for our analyses (up to 50 data points per individual, per network). -->
 
-## Analysis plan
+## Data pre-processing:
 
-### Data pre-processing:
-
-1)  Missing data:
+###  Participant exclusion:
 
 Participants with more than 30 days of non-response, or more than 15 in either the first or last 50 days of measurement, will be excluded from the analyses.
 Remaining missing data points of daily diary variables will be imputed using the Kalman Filter [@Harvey1989] , which has been shown to perform well in simulation studies [@MansuetoEtAl2020].
@@ -306,27 +304,6 @@ data$participantID <- factor(data$participantID,
 N <- max(unique(data$participantID)) #87
 
 ```
-
-### RQ1: Temporal stability estimation
-
-#### Variable selection
-
-Because we expect high heterogeneity in sample in terms of which items apply to an individual's experience and variables with high negative skew (e.g. most responses being zero) are problematic for model estimation (violates model assumptions and can lead to non-convergence).
-We further want to make the variable selection process reproducible by basing the decision process on statistical criteria.
-Selecting variables purely based on statistical properties may result in networks that include only highly similar, closely related variables.
-Also, as resulting estimates of network stability depend on which variables are included in the network, having vastly different idiographic networks may confound these estimates.
-Therefore, want to optimize variable selection in a way that makes idiographic networks somewhat comparable across individuals, while capturing the unique behaviors that are related to individual psychopathology.
-We thus took a hybrid approach of variable selection based ontheoretical as well as statistical grounds:
-
-Each idiographic network will include 3 composite variables (sum scores) which are common across participants: Positive Affect, Negative Affect, and Stress Severity.
-Further, we will include single-item variable capturing daily functioning.
-Per subject, two additional variables will be selected according to their rank on the following scoring algorithm:
-
-Ranking metric = 1-Shapiro-Wilk test statistic T1 \* 1-Shapiro-Wilk test statistic T2 \*prop completed assessments T1 \* proportion completed assessments T2
-
-The Shapiro-Wilk test statistic tests the null hypothesis that a variable is sampled from a normal distribution, ranging from 0 to 1 [@YaziciYolacan2007, @ShapiroWilk1965].
-<!-- Note: Normality of variables is not necessary for estimation, but strong deviations from normality (such as strong negative skew or little variance can contribute to model non-convergence, especially in relatively small samples such as here -->
-
 
 
 ```{r logLoops}
@@ -423,8 +400,6 @@ for (p in 1:N) {
 
 data <- data_detrended
 
-
-
 # NOTE: 
 # we for now decided to detrend irregardless of significance of linear effect. # To check for significance of alpha, include below code in loop: 
 
@@ -434,7 +409,25 @@ data <- data_detrended
       # } else ...
 ```
 
+## Network estimation
 
+### Variable selection for idiographic networks
+
+Because we expect high heterogeneity in sample in terms of which items apply to an individual's experience and variables with high negative skew (e.g. most responses being zero) are problematic for model estimation (violates model assumptions and can lead to non-convergence).
+We further want to make the variable selection process reproducible by basing the decision process on statistical criteria.
+Selecting variables purely based on statistical properties may result in networks that include only highly similar, closely related variables.
+Also, as resulting estimates of network stability depend on which variables are included in the network, having vastly different idiographic networks may confound these estimates.
+Therefore, want to optimize variable selection in a way that makes idiographic networks somewhat comparable across individuals, while capturing the unique behaviors that are related to individual psychopathology.
+We thus took a hybrid approach of variable selection based ontheoretical as well as statistical grounds:
+
+Each idiographic network will include 3 composite variables (sum scores) which are common across participants: Positive Affect, Negative Affect, and Stress Severity.
+Further, we will include single-item variable capturing daily functioning.
+Per subject, two additional variables will be selected according to their rank on the following scoring algorithm:
+
+Ranking metric = 1-Shapiro-Wilk test statistic T1 \* 1-Shapiro-Wilk test statistic T2 \*prop completed assessments T1 \* proportion completed assessments T2
+
+The Shapiro-Wilk test statistic tests the null hypothesis that a variable is sampled from a normal distribution, ranging from 0 to 1 [@YaziciYolacan2007, @ShapiroWilk1965].
+<!-- Note: Normality of variables is not necessary for estimation, but strong deviations from normality (such as strong negative skew or little variance can contribute to model non-convergence, especially in relatively small samples such as here -->
 
 ```{r varSelection2}
 # (1-Normality) t1, 
@@ -471,8 +464,7 @@ log_loops$rank_stat <- log_loops$completed_T1 * log_loops$completed_T2 * log_loo
 
 ```
 
-
-#### Network estimation
+### Network estimation
 
 Idiographic network models will be estimated on an individual basis.
 Contemporaneous and temporal (Lag-1) associations will be estimated in form of a Gaussian Graphical Model using the open-source R package *graphicalVAR* [@EpskampEtAl2018b].
@@ -489,28 +481,23 @@ All applied variations to $/gamma$ and their effects on the results will be repo
 ```{r Composites}
 
 # compute composite variables for positive affect, negative affect, and stress severity
-data$PosAffect_sum <- data$alert + data$active + data$attentive + data$determined + data$inspired
-data$NegAffect_sum <- data$afraid + data$nervous + data$hostile + data$ashamed + data$upset
-data$StressSev_sum <- data$severe1 + data$severe2 + data$severe3 + data$severe4 + data$severe5 + data$severe6 + data$severe7
-
-# TODO: should I use avearge scores instead? more common I guess
-data$PosAffect_avg <- rowMeans( cbind( 
+data$PosAffect <- rowMeans( cbind( 
   data$alert, data$active, data$attentive, data$determined,  data$inspired ))
-data$NegAffect_avg <- rowMeans( cbind( 
+data$NegAffect <- rowMeans( cbind( 
   data$afraid, data$nervous, data$hostile, data$ashamed, data$upset ))
-data$StressSev_avg <- rowMeans( cbind( 
+data$StressSev <- rowMeans( cbind( 
   data$severe1, data$severe2, data$severe3, data$severe4, data$severe5, data$severe6, data$severe7 ))
 
 # TODO: reverse code positive affect for better visual interpretability? 
-
 ```
 
 ```{r NetworkEstimation}
 
-# empty data frame for network output
+# empty data frame to store path estimates in long format (two rows per participant, 1 for T1, 1 for T2)
 networks <- data.frame(
            ID = rep(1:N, each = 2),
            Wave = rep(c("T1", "T2"), N),
+           # Contemporaneous network: lower triangle in col by col format
            PCC_PA_NA = NA,
            PCC_PA_Stress = NA,
            PCC_PA_Task = NA,
@@ -526,6 +513,7 @@ networks <- data.frame(
            PCC_Tasks_Rank1 = NA,
            PCC_Tasks_Rank2 = NA,
            PCC_Rank1_Rank2 = NA,
+           # Temporal networks: full matrix in col by col format
            PDC_PA_PA = NA,
            PDC_PA_NA = NA,
            PDC_PA_Stress = NA,
@@ -563,13 +551,21 @@ networks <- data.frame(
            PDC_Rank2_Rank1 = NA,
            PDC_Rank2_Rank2 = NA,
            PDC_by_col  = NA,
-           SumImputed = NA,# sum of imputed data points in T1 netw
+           # Network descriptives
+           SumImputed = NA, # sum of imputed data points in T1 netw
            Rank1Var = NA, # selected 5th variable included in netw
            Rank2Var = NA, # selected 6th variable included in netw
            converged = NA, # FALSE = model did not converge
            empty = NA , # TRUE = estimated model is emmpty
-           EBIC = NA,
-           gamma = NA
+           EBIC = NA, # optimal (e)bic derived
+           gamma = NA,
+           minimal_lambda = NA, # minimum Lambda value tested 
+           mean_PA = NA, 
+           mean_NA = NA, 
+           mean_Stress = NA,
+           mean_tasks = NA, 
+           mean_Rank1 = NA,
+           mean_Rank2 = NA
 )
 
 # BeckJohnson2020 use gamma = 0, Lambda 0.025:0.25
@@ -592,18 +588,18 @@ for (p in 1:N){
   # select variables for individualized network
   d_T1 <- select(d_T1, 
                  day.response, 
-                 PosAffect_sum, 
-                 NegAffect_sum, 
-                 StressSev_sum, 
+                 PosAffect, 
+                 NegAffect, 
+                 StressSev, 
                  tasks, 
                  Rank1, 
                  Rank2
                  )
   d_T2 <- select(d_T2, 
                  day.response, 
-                 PosAffect_sum, 
-                 NegAffect_sum, 
-                 StressSev_sum, 
+                 PosAffect, 
+                 NegAffect, 
+                 StressSev, 
                  tasks, 
                  Rank1, 
                  Rank2
