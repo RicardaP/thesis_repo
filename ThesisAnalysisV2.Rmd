@@ -46,30 +46,24 @@ bibliography: references.bib
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(warning = TRUE, message = TRUE)
 # install.packages("here")
-setwd("~/GitHub/thesis_repo")
-library(here)
+# setwd("~/GitHub/thesis_repo")
+library("here")
 here::i_am("ThesisAnalysisV2.Rmd") # find directory where file is in
-
+# install.packages("conflicted")
+library("conflicted")
+conflict_prefer("filter", "dplyr")
 # install.packages("tidyverse")
 library("tidyverse")
-
 # install.packages("papaja")
 library("papaja")
-
 # install.packages("imputeTS")
-# library("imputeTS")
-
+ library("imputeTS")
 # install.packages("graphicalVAR")
 library("graphicalVAR")
-
 # install.packages("qgraph")
 library("qgraph")
 
-# install.packages("OpenMX")
-library("OpenMx")
-
 # r_refs("r-references.bib")
-
 
 # Notation: 
 # ---------
@@ -283,23 +277,26 @@ colnames(idx_missing) <- c("ID", "CompletedTotal", "CompletedT1", "CompletedT2",
 for (p in 1:N){
   # ID
   idx_missing[p,1] <- p
+  # CompletedTotal 
   d <- filter(data, data$participantID == p)
-  # CompletedTotal    
   idx_missing[p,2] <-  unique(d$total.days)
+  # CompletedT1 
   d1 <-  filter(d, day.response %in% 1:50, missingResponse == 1)
-  # CompletedT1      
   idx_missing[p,3] <- dim(d1)[1]
+  # CompletedT2
   d2 <-  filter(d, day.response %in% 51:100, missingResponse == 1)
-  # CompletedT2      
   idx_missing[p,4] <- dim(d2)[1]
-  # check variance in tasks, we need to exclude participants with zero variance in this variable for networks to converge
+  # also exclude participants with zero variance in 'tasks' variable
   d3 <- filter(d, day.response %in% 1:50)
   idx_missing[p,6] <- var(d3$tasks, na.rm = T) > 0
   d4 <- filter(d, day.response %in% 51:100)
   idx_missing[p,7] <- var(d4$tasks, na.rm = T) > 0
-  # Include; TRUE if more than 70 responses overall, and more than 35 both T1 and T2
-  # ALSO EXCLUDING 6 PARTICIPANTS WITH ZERO VAR IN TASKS
-  idx_missing[p,5] <- idx_missing[p,2]>70 & idx_missing[p,3]>35 & idx_missing[p,4]>35 &  idx_missing[p,6]==T & idx_missing[p,7]==T
+  # Include; TRUE if more than 70 responses overall, and more than 35 both T1 and T2, and non-zero var in 'tasks'
+  idx_missing[p,5] <- idx_missing[p,2]>70 &
+                      idx_missing[p,3]>35 &
+                      idx_missing[p,4]>35 &  
+                      idx_missing[p,6]==T & 
+                      idx_missing[p,7]==T
 }
 
 # included IDs
@@ -308,14 +305,14 @@ idx_included <- idx_missing %>% as.data.frame() %>% filter(Include == TRUE)
 # exclude participants
 data <- filter(data, participantID %in% idx_included$ID)
 
-# rename IDs again for future looping
+# rename IDs for easy looping
 data$participantID <- factor(data$participantID, 
-         levels = unique(data$participantID), 
-         labels = 1:length(unique(data$participantID))) %>% 
-  as.numeric()
+                      levels = unique(data$participantID), 
+                      labels = 1:length(unique(data$participantID))) %>% 
+                      as.numeric()
 
-# N: participants retained
-N <- max(unique(data$participantID)) #87, 79 after excluding also people with zero variance on "tasks"
+# N: nr participants retained
+N <- max(unique(data$participantID)) # 79
 
 data$PosAffect <- NA
 data$NegAffect <- NA
@@ -340,7 +337,20 @@ for (p in 1:N){
         # cat("<- F","ID",p,"var",v, sep = "")    # for check
     }
 }
+
+# compute composite variables for positive affect, negative affect, and stress severity
+data$PosAffect <- (data$alert + data$active + data$attentive + 
+                   data$determined + data$inspired) / 5
+data$NegAffect <- (data$afraid + data$nervous + data$hostile + 
+                   data$ashamed + data$upset) / 5
+data$StressSev <- (data$severe1 + data$severe2 + data$severe3 +
+                   data$severe4 + data$severe5 + data$severe6 + data$severe7) / 7
+emaLabels <-  data %>% 
+              select(-(participantID:total.days)) %>% 
+              colnames()
+
 data_daily_imputed <- data # keep copy of imputed data
+# TODO: reverse code positive affect for better visual interpretability? 
 
 # NOTE:
 # error is thrown when assigning imputed data to df:
@@ -353,16 +363,6 @@ data_daily_imputed <- data # keep copy of imputed data
 # example of itiration w errors: 
 # i = 86; v = 41
 # cbind( data_daily_imputed[data_daily_imputed$participantID == p, 5+v] , na_kalman(data[data_daily_imputed$participantID == p, 5+v]))
-```
-
-```{r Composites, message=TRUE, warning=TRUE}
-
-# compute composite variables for positive affect, negative affect, and stress severity
-data$PosAffect <- (data$alert + data$active + data$attentive + data$determined + data$inspired) / 5
-data$NegAffect <- (data$afraid + data$nervous + data$hostile + data$ashamed + data$upset) / 5
-data$StressSev <- (data$severe1 + data$severe2 + data$severe3 + data$severe4 + data$severe5 + data$severe6 + data$severe7) / 7
-emaLabels <- data %>% select(-(participantID:total.days)) %>% colnames()
-# TODO: reverse code positive affect for better visual interpretability? 
 ```
 
 #### Detrending linear effects
@@ -428,37 +428,43 @@ for (p in 1:N){
     EMA_descriptives$completed_T2[idx] <- sum(!is.na(raw_T2[ ,5+v]))/50
     # (1-Normality) Raw Variables T1 and T2
     if (length(unique(na.omit(raw_T1[ ,5+v]))) > 1) {
-        EMA_descriptives$norm_T1[idx] <- 1 - shapiro.test(raw_T1[ ,5+v])[[1]] 
-    } else EMA_descriptives$norm_T1[idx] <- 0
+            EMA_descriptives$norm_T1[idx] <- 1-shapiro.test(raw_T1[ ,5+v])[[1]] 
+    } else  EMA_descriptives$norm_T1[idx] <- 0
     if (length(unique(na.omit(raw_T2[ ,5+v]))) > 1) {
-       EMA_descriptives$norm_T2[idx] <- 1 - shapiro.test(raw_T2[ ,5+v])[[1]] 
-    } else EMA_descriptives$norm_T2[idx] <- 0
+            EMA_descriptives$norm_T2[idx] <- 1-shapiro.test(raw_T2[ ,5+v])[[1]] 
+    } else  EMA_descriptives$norm_T2[idx] <- 0
     # (1-Normality) Detrended Variables T1 and T2
     if (length(unique(na.omit(raw_T1[ ,5+v]))) > 1) {
-        EMA_descriptives$norm_detrended_T1[idx] <- 1 - shapiro.test(detrended_T1[ ,5+v])[[1]]
-    } else EMA_descriptives$norm_detrended_T1[idx] <- 0
+            EMA_descriptives$norm_detrended_T1[idx] <- 1-shapiro.test(detrended_T1[ ,5+v])[[1]]
+    } else  EMA_descriptives$norm_detrended_T1[idx] <- 0
     if (length(unique(na.omit(raw_T2[ ,5+v]))) > 1) {
-       EMA_descriptives$norm_detrended_T2[idx] <- 1 - shapiro.test(detrended_T2[ ,5+v])[[1]]
-    } else EMA_descriptives$norm_detrended_T2[idx] <- 0
+            EMA_descriptives$norm_detrended_T2[idx] <- 1-shapiro.test(detrended_T2[ ,5+v])[[1]]
+    } else  EMA_descriptives$norm_detrended_T2[idx] <- 0
     # Means and SDs of raw and imputed, T1 and T2
-    EMA_descriptives$mean_raw_T1[idx]     <- raw_T1[ ,5+v]     %>% mean(na.rm = TRUE) %>% round(2)
-    EMA_descriptives$mean_raw_T2[idx]     <- raw_T2[ ,5+v]     %>% mean(na.rm = TRUE) %>% round(2)
-    EMA_descriptives$sd_raw_T1[idx]       <- raw_T1[ ,5+v]     %>% sd(na.rm = TRUE) %>% round(2)
-    EMA_descriptives$sd_raw_T2[idx]       <- raw_T2[ ,5+v]     %>% sd(na.rm = TRUE) %>% round(2)
-    EMA_descriptives$mean_imputed_T1[idx] <- imputed_T1[ ,5+v] %>% mean(na.rm = TRUE) %>% round(2)
-    EMA_descriptives$mean_imputed_T2[idx] <- imputed_T2[ ,5+v] %>% mean(na.rm = TRUE) %>% round(2)
-    EMA_descriptives$sd_imputed_T1[idx]   <- imputed_T1[ ,5+v] %>% sd(na.rm = TRUE) %>% round(2)
-    EMA_descriptives$sd_imputed_T2[idx]   <- imputed_T2[ ,5+v] %>% sd(na.rm = TRUE) %>% round(2)
+    EMA_descriptives$mean_raw_T1[idx]     <- raw_T1[ ,5+v]     %>% mean(na.rm = TRUE)
+    EMA_descriptives$mean_raw_T2[idx]     <- raw_T2[ ,5+v]     %>% mean(na.rm = TRUE)
+    EMA_descriptives$sd_raw_T1[idx]       <- raw_T1[ ,5+v]     %>% sd(na.rm = TRUE) 
+    EMA_descriptives$sd_raw_T2[idx]       <- raw_T2[ ,5+v]     %>% sd(na.rm = TRUE) 
+    EMA_descriptives$mean_imputed_T1[idx] <- imputed_T1[ ,5+v] %>% mean(na.rm = TRUE)
+    EMA_descriptives$mean_imputed_T2[idx] <- imputed_T2[ ,5+v] %>% mean(na.rm = TRUE)
+    EMA_descriptives$sd_imputed_T1[idx]   <- imputed_T1[ ,5+v] %>% sd(na.rm = TRUE) 
+    EMA_descriptives$sd_imputed_T2[idx]   <- imputed_T2[ ,5+v] %>% sd(na.rm = TRUE) 
   }
 }
 
 # rank stat raw data
-EMA_descriptives$rank_stat <- EMA_descriptives$completed_T1 * EMA_descriptives$completed_T2 * EMA_descriptives$norm_T1 * EMA_descriptives$norm_T2
+EMA_descriptives$rank_stat <- EMA_descriptives$completed_T1 * 
+                              EMA_descriptives$completed_T2 * 
+                              EMA_descriptives$norm_T1 * 
+                              EMA_descriptives$norm_T2
 
 # rank stat on detrended data
-EMA_descriptives$rank_stat_detrended <- EMA_descriptives$completed_T1 * EMA_descriptives$completed_T2 * EMA_descriptives$norm_detrended_T1 * EMA_descriptives$norm_detrended_T2
+EMA_descriptives$rank_stat_detrended <- EMA_descriptives$completed_T1 * 
+                                        EMA_descriptives$completed_T2 * 
+                                        EMA_descriptives$norm_detrended_T1 * 
+                                        EMA_descriptives$norm_detrended_T2
 
-data <- data_detrended
+saveRDS(EMA_descriptives, file = here("Data", "EMA_descriptives.RDS"))
 
 # to peak at average rank score averages in sample:
 # EMA_descriptives %>% group_by(emaLabels) %>% summarise( avg = mean(rank_stat_detrended)) %>% View()
@@ -571,21 +577,18 @@ comparisons <- data.frame(ID = 1:N)
 
 # Specification a la BeckJohnson2020, gamma = 0, Lambda range 0.025 to 1
 for (p in 1:N){
-  if (p %in% c(2)) { # model not converging for Participant 2
-    next 
-    }
   # filter data by participant
   d_T1 <- filter(data, participantID==p, day.response %in% 1:50)
   d_T2 <- filter(data, participantID==p, day.response %in% 51:100)
-  #  extract two highest ranking DPDS/behavior variables, higher rank stat = better
-  dpds  <- filter(EMA_descriptives, 
+  #  select two highest ranking DPDS/behavior variables, higher rank stat = better
+  selectVar  <- filter(EMA_descriptives, 
                   EMA_descriptives$ID == p, 
                   EMA_descriptives$emaLabels %in% 
                     emaLabels[c(11:23, 31:60)]
                   )
-  dpds_ranked <- dpds[order(dpds$rank_stat_detrended, decreasing = TRUE), ]
-  Rank1       <- dpds_ranked[1, 3]
-  Rank2       <- dpds_ranked[2, 3]
+  selectVar <- selectVar[order(selectVar$rank_stat_detrended, decreasing = TRUE), ]
+  Rank1       <- selectVar[1, 3]
+  Rank2       <- selectVar[2, 3]
   # log name of DPDS Variables
   comparisons$Rank1[p] <- Rank1
   comparisons$Rank2[p] <- Rank2
@@ -650,7 +653,7 @@ for (p in 1:N){
           )
 }
 
-saveRDS(networks, file = "networks.RDS")
+saveRDS(networks, file = here("data", "networks.RDS"))
 
 networks$nr_zero_PCC        <- sum(networks[ ,idx_PCC] == 0)
 networks$nr_zero_PDC        <- sum(networks[ ,idx_PDC] == 0)
@@ -698,8 +701,8 @@ for (p in 1:N) {
                                            (PDC_T1 < 0 & PDC_T2 < 0))
 }
 
-hist(comparisons$PCCs_cor, breaks = 79)
-hist(comparisons$PDCs_cor, breaks = 79)
+hist(comparisons$PCCs_cor, breaks = N)
+hist(comparisons$PDCs_cor, breaks = N)
 # checl sascha False Alarm code https://osf.io/xh87b/
 # check sForbes Quantifying code https://osf.io/qcrjk/
 
