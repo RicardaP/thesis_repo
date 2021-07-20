@@ -1,6 +1,6 @@
 ---
-title             : "Within-person replicability of idiographic networks"
-shorttitle        : ""
+title             : "Temporal stability of idiographic psychological networks"
+shorttitle        : "Temporal stability idiographic networks"
 
 author: 
   - name          : "Ricarda K. K. Proppert"
@@ -11,8 +11,7 @@ author:
 
 affiliation:
   - id            : "1"
-    institution   : "Clinical Psychology, Leiden University, The Netherlands"
-
+    institution   : "Leiden University, The Netherlands"
 
 abstract: |
   Evidence-based mental health programs have long conceptualized mental disorders in terms of interactions between thoughts, feelings, behaviours and external factors.
@@ -22,29 +21,41 @@ abstract: |
   While methods to assess network parameter accuracy have been developed for cross-sectional data, no such method exists for single-subject data. The extend to which idiographic networks are stable, or vary over time, is unknown.
   
   In the current work, we reanalyse daily symptom records of people with personality disorders to explore the stability of idiographic networks over time, as well as the degree to which network stability varies across individuals. We further explore antecents that may relate to inter-individual variation in network stability using predictive LASSO regression.
+  
+authornote: |
+  Research Master thesis Clinical and Health Psychology, supervised by Dr. Eiko Fried, Leiden University. Data and analysis script are available at Github.com/RicardaP/thesis_repo.
 
   
 keywords          : ""
-wordcount         : ""
-
+wordcount         : "000"
+note              : "s1348981"
 
 floatsintext      : no
-figurelist        : no
-tablelist         : no
+figurelist        : yes
+tablelist         : yes
 footnotelist      : no
 linenumbers       : yes
 mask              : no
 draft             : no
 
+
 documentclass     : "apa6"
 classoption       : "man"
-output            : papaja::apa6_doc
+output            : papaja::apa6_pdf
 
 bibliography: references.bib
+editor_options:
+  markdown:
+    wrap: sentence
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(warning = TRUE, message = TRUE)
+knitr::opts_chunk$set( echo = FALSE,
+                       results = "asis",
+                       warning = FALSE,
+                       message = FALSE,
+                       eval = TRUE)
+
 # install.packages("here")
 # setwd("~/GitHub/thesis_repo")
 library("here")
@@ -62,16 +73,47 @@ library("papaja")
 library("graphicalVAR")
 # install.packages("qgraph")
 library("qgraph")
+# install.packages("reshape2")
+library("reshape2")
+# install.packages("lm.beta")
+library("lm.beta")
 
+data_daily    <- read.csv(here("data", "dd100_daily.csv"))    %>% select(-X)
+data_baseline <- read.csv(here("data", "dd100_baseline.csv")) %>% select(-X)
+
+data_daily_raw      <- readRDS(here("data", "data_daily_raw.RDS"))
+data_daily_imputed  <- readRDS(here("data", "data_daily_imputed.RDS"))
+data_detrended      <- readRDS(here("data", "data_detrended.RDS"))
+data_merged         <- readRDS(here("data", "data_merged.RDS"))
+
+networks    <- readRDS(here("data", "networks.RDS"))
+comparisons <- readRDS(here("data", "comparisons.RDS"))
+
+ID53_T1 <- readRDS(here("data", "network_objects", "ID53_T1.RDS"))
+ID53_T2 <- readRDS(here("data", "network_objects", "ID53_T2.RDS"))
+ID45_T1 <- readRDS(here("data", "network_objects", "ID45_T1.RDS"))
+ID45_T2 <- readRDS(here("data", "network_objects", "ID45_T2.RDS"))
+
+idx_PCC <- 3:17
+idx_PDC <- 18:53
+emaLabels <-  data_daily %>% 
+              select(-(participantID:total.days)) %>% 
+              colnames()
+
+
+# datafolder <- here("Data")
+# rds         <- dir(datafolder, pattern = "*.RDS")
+#-------------------------------------------------
 # r_refs("r-references.bib")
 
 # Notation: 
 # ---------
-#     data:   full data set. Operations on the complete data set ()
-#             In chunks that manipulate the whole data set (eg., imputation, detrending) I reassign the manipulated data object to 'data', so that results can easily be rerun on not detrended / not imputed data by simply not evaluating the previous code chunk
+#     data:   placeholder for data used in specific chunk
 #     p:      participant (iteration in loop)
 #     v:      variable (iteration in loop)
 #     d:      temporary data object in loop
+#     T1:     days 1 - 50
+#     T2:     days 51-100
 
 
 # sessionInfo()
@@ -81,71 +123,34 @@ library("qgraph")
 # Running under: macOS Big Sur 10.16
 ```
 
-```{r readData, message=TRUE, warning=TRUE}
-# read data
-# data <- read.csv(here("data", "dd100-proppert.csv"))
-# 
-# N <- data$participantID %>% unique()
-# range(N) # 1 : 116
-# length(unique(N)) # 112
-# setdiff(1:116, N) # Participants  8, 25, 45, 92  had been excluded by original authors because more than 30% of responses were missing
-# 
-# # rename IDs for easier looping
-# data$participantID <- factor(
-#   data$participantID, 
-#   levels = unique(data$participantID), 
-#   labels = 1:length(unique(data$participantID))
-#   ) %>% 
-#   as.numeric()
-# 
-# #select variables I want to use, save to publish along code
-# data_daily    <- data %>% select(participantID:dpds32) %>% select(-sleep, -alcohol.daily, -drugs.daily, -starts_with("stress")) # daily
-# data_baseline <- data %>% select(participantID, assessment.date:age, happy, swlsMean, recentTreatment, neoN:neoC) %>% distinct()
-# write.csv(data_daily, here("data", "dd100_daily.csv"))
-# write.csv(data_baseline, here("data", "dd100_baseline.csv"))
-# rm(data)
-
-data_daily    <- read.csv(here("data", "dd100_daily.csv"))    %>% select(-X)
-
-```
-
-<!-- TODO: 
--    add Eiko as Supervisor
-- place authornote in YAML again, currently throws error due to papaja bug. 
-Issue: https://github.com/crsh/papaja/issues/225
-
-authornote: "Master thesis for the Research Master Clinical- and Health psychology (combined track) under supervision of Dr. Eiko Fried. We thank Dr. Aidan Wright, Pittsburg University, and his colleagues for sharing their data with us. The reproducible analysis script can be downloaded at "link Github", data are available upon request."
-
+```{=html}
 - Abstract needs Results and Implication
-- Specify authorship roles in YAML (see Master guidelines)
-- wording consistent: stability vs accuracy
--->```
+- ? TODO mention that results from grouplevel may not generalize to individual level, eg. @Bulteel2018
+```
 # Introduction
 
 ## Idiographic psychological networks
 
-Idiographic network models are of growing interest to clinical psychology because they may address two recently voiced calls in clinical psychology: Firstly, there seems to be a need for psychological research to re-orient towards idiographic methods that study intra-individual processes as opposed to group-level differences [@Molenaar2004].
-<!--TODO mention that results from grouplevel may not generalize to individual level, eg. @Bulteel2018 --> Secondly, scholars are proposing a paradigm shift away from reductionism towards studying the complexity of psychological phenomena.
-The Network theory of mental disorders [@BorsboomCramer2013; @CramerEtAl2010] attempts to integrate psychology with insights and methods from complexity science, proposing a novel but well-received theoretical framework to study and understand the underpinnings of psychopathology.
-The network theory of mental disorders conceptualizes psychopathology as an emergent state of dynamically interacting psychological symptoms and states, as well as factors external to this system.
-<!-- Eiko: can also be somatic sx, but R can't find way to keep sentence readible--> This account seems closely aligned with established clinical practices where informal case conceptualizations in form of path diagrams are used to describe the proposed mechanisms of a given disorder (@BurgerEtAl2020, @ScholtenEtAl2020).
+Idiographic network models are of growing interest to clinical psychology because they may address two recently voiced calls in clinical psychology: First, there seems to be a need for psychological research to re-orient towards idiographic methods that study intra-individual processes as opposed to group-level differences [@Molenaar2004].
+Second, scholars have been proposing a paradigm shift away from reductionism towards studying the complexity of psychological phenomena.
+The Network theory of mental disorders [@BorsboomCramer2013; @CramerEtAl2010] attempts to integrate psychology with insights and methods from complexity science, proposing a novel and well-received theoretical framework to study and understand the underpinnings of psychopathology.
+The network theory of mental disorders conceptualizes psychopathology as an emergent state of dynamically interacting symptoms, as well as factors external to this system.
+Importantly, it conceptualizes psychological symptoms as agents that contribute, not result from, psychopathology.
+This account seems closely aligned with established clinical practices where informal case conceptualizations in form of path diagrams are used to describe the proposed mechanisms of a given disorder (@BurgerEtAl2020, @ScholtenEtAl2020).
 <!--For example, dysfunctional cycle of mutually interacting stressors, thoughts, feelings and behaviors.-->
 
-With the ongoing development of statistical methods to visualize and quantify such system's structures and behaviors, called psychological networks [@EpskampEtAl2018], an increasing body of research is now applying this framework to study symptom networks in people with mental disorders.
-<!-- ref Sascha Diss, and perhaps mention / explain "psychonetrics"--> Psychological networks consist of elements (nodes) and their pairwise interactions (edges), together forming a complex system.
-Nodes represent psychological or other variables, such as psychological or somatic symptoms, stressors, or behaviors.
+Psychological network models [\@EpskampEtAl2018] are the methodological workhorse that quantify and visualize such system structures and dynamics.
+Psychological network models consist of elements (nodes) and their pairwise interactions (edges), together representing a complex system.
+Nodes typically represent psychological variables, e.g. symptoms and behaviors, or influences from the external field, such as stressors.
 Edges represent pairwise relationships between these variables.
-These relationships may be directed or undirected, positive or negative, and can differ in strength.
-These associations and are thought to result from of a multitude of mechanisms which may not necessarily be known or defined.
-
-
-<!-- talk about stationarity assumption and time-varying autoregressive models eg HaslbeckBringmanWaldop2018, 
-and https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7186258/ -->
+These relationships may be directed or undirected , positive or negative, and can differ in strength.
+Network models thus come in many different flavors, pertaining to the estimation procedures by which edge parameters are modeled and estimated, and lend themselves to a multitude of research questions.
+As estimation procedures have been made readily available, the body of literature applying these methods is growing rapidly.
+Most of the early psychological network research focused on comparing network structures across groups of people.
+Recently, comparisons are also made within groups of people over time, for example, investigating the longitudinal network stability of PTSD symptoms in military veterans pre- to post-combat, @SegalEtAl2020; during recovery, @vonStockertEtAl2018; or in response to earthquake catastrophes, @GeEtAl2019.
+<!-- and in patients with Anxiety and Depression, @CurtissEtAl ).-->
 
 ## Temporal stability of networks
-
-Most of the early psychological network research focused on group-level analyses and cross-sectional comparisons, mainly for practical reasons such as availability of existing data-sets.
-Few studies have investigated longitudinal network stability at a group level (e.g., in veterans pre- to post-combat, @SegalEtAl2020; military veterans, @vonStockertEtAl2018; among adolescent earthquake survivors, @GeEtAl2019; and in patients with Anxiety and Depression, @CurtissEtAl ).
 
 Besides group-level analyses, there is growing interest in idiographic network models of intra-individual symptom dynamics.
 Researchers in clinical psychology in particular hope that such models could resolve what is known as the Therapist's dilemma <!-- explain and ref --> (eg., @FrumkinEtAl2020, @HoweEtAl2020, @CavigliaColeman2016, @HoffartJohnson2020).
@@ -158,43 +163,55 @@ For example, signs of critical slowing down, showing as increased auto-correlati
 
 <!-- feasibility study frumkin -->
 
-<!-- Stability and accuracy of psychological networks TODO: explain vocab as used in this work. Accuracy = accuracy of parameter estimates Stability = stability of underlying process -->
-
-<!--In practice, these two are rarely distinguished. A major reason for this is that methods to estimate network parameter accuracy have only recently become available and implemented in popular software packages (estimating stability paper) Furthermore, for the most popular estimation method graphical Var / ml Var (vector autoregressive models) they are not available yet. -->
-
-Empirical work is published in which differences in network structures are interpreted at face value.
+Differences in network structures are often interpreted at face value.
 For example, @ThononEtAl2020 followed three psychiatric patients over the course of treatment and interpreted changes in idiographic network structures over time as additional evidence for and a description of the observed therapeutic change.
-Such a substantial interpretation of network instability hinges on the assumption that differences in estimated network parameters accurately reflect change in the data-generating mechanism.
-This assumption rests on two conditions: First, parameter estimates need to be an accurate reflection of the true underlying relationship.
-Second, the underlying mechanism would have remained stable if no intervention took place (related to the assumption of stationarity made during model estimation).
-Neither of these conditions can currently be evaluated in rigorous ways for idiographic network models.
-Methods to assess the accuracy of parameter estimates have been developed for group-level estimation procedures [@EpskampEtAl2018], but are not yet available for idiographic estimation methods.
-<!-- explain estimating accuracy methods and why not available for gVAR and idiographic models --> The degree to which underlying dynamic psychological processes are stable within individuals over time is unclear.
+Such a substantial interpretation of network instability assumes that differences in estimated network parameters accurately reflect a change in the data-generating process.
+This assumption rests on two conditions: First, parameter estimates need to be an accurate reflection of the true underlying relationship, meaning they should be unbiased and reliable.
+Second, the underlying mechanism is assumed to have remained stable if no intervention took place.
+Neither of these conditions can currently be evaluated for idiographic network models.
+While bootstrapping procedures to assess the accuracy and reliability of parameter estimates have been developed for neworks estimated on group-level data [@EpskampEtAl2018], comparable tools are not yet available for idiographic estimation methods.
+Furthermore, the degree to which complex psychological processes are stable within individuals over time is unclear.
 Current literature investigating the temporal stability of idiographic networks mostly focuses on settings where change is expected to occur, e.g., in response to psychological treatment [@ThononEtAl2020], discontinuation of antidepressant medication [@WichersEtAl2016], or the COVID-19 pandemic [@BeckJackson2021].
-To our knowledge, only one study has investigated the temporal stability of psychological networks in situations where no change would be expected.
+
+To our knowledge, only one study has investigated the temporal stability of idiographic psychological networks in a setting where no profound change was expected.
 @BeckJackson2020a investigated the consistency of idiographic personality over the course of two years.
-They reported high consistency among contemporaneous associations, low consistency of temporal associations, and considerable interpersonal variability in the stability of networks.
+Their study reports high consistency among contemporaneous associations, and low consistency of temporal associations.
+Interestingly, they found considerable interpersonal variability in the stability of networks, which appeared to be weakly related to participants life satisfactions.
 
-<!-- BeckJackson2020 use GIMME and no detrending, super helpful prereg and code on osf + gh -->
+Summing up, psychological network models have been described as "window into a patient's daily life" @EpskampEtAl2018a.
+The question remains whether this window provides an unobstructed and representative view.
+Is this window a doorhole, or a panorama front?
+Are we getting a clear view inside, or are we mostly seeing our own reflections?
 
-<!--
-## Current challenges in research on idiographic networks
+## Conceptual distinctions
 
-Explain estimation procedures and assumptions in more detail: - explain graphicalVAR estimation - stationarity - multivariate normality - no measurement error - mention related methods that we do not use here, and why (mlVAR, baysian, all the other not so networky idioraphic models (see idio review)
+Recent reviews have raised concerns that the network approach may leave important methodological challenges unaddressed.
+Most prominently, there appears to be disagreement on whether findings in the network literature are replicable or might propell psychologiy back into the replication crisis it is trying to recover from.
+(CITE forbes und co).
+We will briefly outline the most relevant methodological concepts that should be considered in relation to temporal network stability.
+It should be noted that many of these concepts are not clearly distinguished in the current literature, and that terms tend to be used interchangeably.
+In the current work, we strive to keep a consistent distinction, but the definitions applied here may not be accurate given the lack of agreement in current publications.
 
--   require high power, which is difficult to obtain in longitudinal N=1 study (burdensome)
+### Network theory versus network models
 
--   even if power is high and networks can be estimated reliably, longitudinal stability of networks is unknown (ie how they generalize to different time within same individual)
+Network theory ... Network models ... graphical Vector Autoregressive models / partial correlation models popular in idiographic research, but other estimation methods exist, which each their strengths and limitations.
 
--   stability of estimates is an important issue (beyond scopoe here but explain this as important limitation)
+### Stability of complex systems vs stability of network models
 
--   even if estimates stable, replicability not warranted:
+Stabilitiy of a complex system: attractor states, phase transitions, tipping points, research on EWS Stability of network models: recovery of data generating structure, simulation work Stationarity assumption as a 'necessity' for model estimation, but work on time varying models is being developed
 
--   How stable is the data generating process we try to capture? Is this the process of interest? Is it malleable? Phase transitions?
+### Replicability versus reproducibility
 
--   feasibility
--->
+Replicability: same structure in different sample?
+- measurement error and psychometric theroy, Forbes main crtique?
 
+Reproducibility: same structure in same sample?
+- reseracher degrees of freedom, modeling decisions.
+many analysists work on idio models - different models yield different conclusions
+
+Investigating the temporal stability of idiograohic network structures thus hinges on two major aspects: - cannot distinguis stability of parameter from stability of system with the methods available - modeling steps taken are somewhat arbitrary, and best practice have yet to be established
+
+```{=html}
 <!-- idea eiko: "There are 5 main challenges, bla bla bla. In this work, we will tacke 1,2  and 3". Rest goes into limitations.
 
 "where ema res is by nature confined to assess snapshots we dont now how well networks replicate within a person even
@@ -217,40 +234,36 @@ statistical things:
 - density: strength of sum of edges
 - sparsity:  "percentage non-zero cells" 
 -->
-
+```
 ## Aim of this study
 
 <!-- A recent simulation study (preprint Mansueto), ... required power would be bla.-->
 
-The present study aims to assess the stability of idiographic networks of psychopathology, as well as exploring potential person-specific factors and statistical factors predicting interpersonal variation in temporal network stability.
+The present study aims to assess the stability of idiographic networks of psychopathology, and explore factors which may explain inter-individual variation in network stability.
 
-We will address the following research questions:
+-   RQ1: How stable are estimated idiographic network structures over time?
 
-RQ1: How stable are estimated idiographic network structures over time?
+-   RQ2: What person-specific or model-specific factors explain variation in idiographic network stability?
 
-RQ2: What factors, person-specific or of statistical nature, predict inter-individual variation in intra-individual replicability?
-
-To this end, we re-analyze daily diary data collected in a clinical sample of people diagnosed with a personality disorder [@WrightEtAl2015a; @WrightSimms; @WrightEtAl2015].
-Participants (N=116) provided once-daily ratings of their mood, behaviors, and daily stressors over the course of 100 consecutive days.
-To assess intra-individual stability of idiographic networks, we will fit separate idiographic networks on the first and last 50 days of measurement.
-Network structures of each individual's first vs. last 50 days of measurements will be compared by correlating estimated path estimates, with high correlation indicating high temporal stability.
-Finally, person-specific antecedents and statistical factors will be tested for their ability to predict interindividual variation in network stability using predictive LASSO regression.
+To this end, we re-analyze daily diary data of people diagnosed with a personality disorder [@WrightEtAl2015a; @WrightSimms; @WrightEtAl2015].
+Participants (N=116) provided once-daily ratings of their mood, behavior, and daily stressors over the course of 100 consecutive days.
+To assess intra-individual stability of idiographic networks (RQ1), we fit subject-specific graphical Vector Auto-regressive models (graphical VAR, @EpskampEtAl2018b ) on participants' first and last 50 days of measurement separately.
+Network structures of each individual's first (T1) vs. last 50 days (T2) are compared in their global structure on multiple indices, where high similarity of an individuals' network strucutures at T1 and T2 indicate high temporal network stability.
+We illustrate and interpret the temporal stability of two participants by example.
+Lastly, person-specific and network-specific attributes are explored for their ability to explain interindividual variation in network stability using multivariate linear regression (RQ2).
 
 # Methods
+
+We used R <!--# TODO: cite and migrate refs --> for all our analyses.
+Data and analysis scripts are available at github.com/RicardaP/thesis_repo.
+
 ## Data Set
 
-A summarized version of the data are published HERE, an overview of all available variables can be found in Appendix A.
+<!--# short description and motivation -->
 
-The original study design by which the data were collected are described in detail in previous publications [@WrightEtAl2015; @WrightSimms; @WrightEtAl2015a].
-The study investigated daily dynamics in affect, stress, andexpressions of personality disorder, along with some lifestyle variables such as self-reported sleep, drug and alcohol use, and overall functioning.
-Participants were recruited from an ongoing clinical study (N=628, @SimmsEtAl2011) that targeted individuals who had received psychiatric treatment within the previous two years, recruited via flyers distributed at mental health clinics across Western New York, USA. They were invited for study participation if they met the diagnostic requirements of any personality disorder during the initial structured clinical interview conducted for the parent study (SCID-II, TODO REF), and if they had daily internet access via a computer or mobile device.
-116 participants were initially enrolled, of which 101 participants completed at least 30 of the desired 100 daily measurements.
+<!--The original study design by which the data were collected are described in detail in previous publications [@WrightEtAl2015; @WrightSimms; @WrightEtAl2015a]. The study investigated daily dynamics in affect, stress, andexpressions of personality disorder, along with some lifestyle variables such as self-reported sleep, drug and alcohol use, and overall functioning. Participants were recruited from an ongoing clinical study (N=628, @SimmsEtAl2011) that targeted individuals who had received psychiatric treatment within the previous two years, recruited via flyers distributed at mental health clinics across Western New York, USA. They were invited for study participation if they met the diagnostic requirements of any personality disorder during the initial structured clinical interview conducted for the parent study (SCID-II, TODO REF), and if they had daily internet access via a computer or mobile device. 116 participants were initially enrolled, of which 101 participants completed at least 30 of the desired 100 daily measurements. -->
 
-Participants completed daily measurements over the course of 100 consecutive days.
-Participants completed surveys at roughly the same time each night, depending on their individual schedule.
-Therefore, therefore, this data set is expected to meet the assumption of roughly equal time intervals in between measurements [@Epskamp2020].
-Furthermore, the original authors reported stability of means and variances of expressions of daily psychopathology in @WrightSimms, indicating that the assumption of stationarity may be realistic [@Epskamp2020].
-Participants started measurements asynchronically, so that no sample-wide history effects should affect our results on longitudinal within-person stability of estimated networks.
+<!-- Participants completed daily measurements over the course of 100 consecutive days. Participants completed surveys at roughly the same time each night, depending on their individual schedule. Therefore, therefore, this data set is expected to meet the assumption of roughly equal time intervals in between measurements [@Epskamp2020]. Furthermore, the original authors reported stability of means and variances of expressions of daily psychopathology in @WrightSimms, indicating that the assumption of stationarity may be realistic [@Epskamp2020]. Participants started measurements asynchronically, so that no sample-wide history effects should affect our results on longitudinal within-person stability of estimated networks.-->
 
 <!-- We chose this data set for this study for three main reasons: It met our minimum requirement of spanning a sufficiently long time scale of intensive longitudinal data, it was readily available, and we believe the design to be a good representation of a feasible clinical setting: Daily records are an already well-established method for enhancong diagnosis and monitoring patients daily lives, and asks less burden of participants compared to more intensive EMA methods. Secondly, the duration of 100-days consistent data collection was long enough so that splitting the data seemed feasible. Recorded variables - although being collected in a sample of people diagnosed with a personality disorder - were general enough to not be restricted to a certain mental disorder. -->
 
@@ -258,20 +271,69 @@ Participants started measurements asynchronically, so that no sample-wide histor
 
 <!-- Representativeness of realistic clinical designs: Applications of idiographic network models are currently scarce, mainly because they require well-powered data that necessarily come at increased burden to the participants. To improve power in single-subject longitudinal designs, such as ESM / EMA or daily diary studies, Participants are required to either provide more intensive momentary data, or provide less intensive (eg., daily) records over a longer period. Specific power requirements for idiographic networks are still unknown. Some simulation work suggests that ..... , depending on the number of estimated nodes and amount of missingness. Given that daily diaries a more established method of data collection in clinical research and mental health care, and assuming that it poses less burden on participants compared to more intensive sampling frames, we hope that this data is at the higher end of what seems realistic and feasible for future study designs and applications. Simultaneously, although no precise power estimates are currently available, we hope that meets the minimum power needed for our analyses (up to 50 data points per individual, per network). -->
 
+```{r readData, eval = FALSE}
+#---------------------------------------------------------
+# Processing of original (unpublished) data.
+# Please use "dd100_daily.csv" and "dd100_baseline.csv" below.
+#---------------------------------------------------------
+# read data
+# data <- read.csv(here("data", "dd100-proppert.csv"))
+# 
+# N <- data$participantID %>% unique()
+# range(N) # 1 : 116
+# length(unique(N)) # 112
+# setdiff(1:116, N) # Participants  8, 25, 45, 92  had been excluded by original authors because more than 30% of responses were missing
+# 
+# # rename IDs for easier looping
+# data$participantID <- factor(
+#   data$participantID, 
+#   levels = unique(data$participantID), 
+#   labels = 1:length(unique(data$participantID))
+#   ) %>% 
+#   as.numeric()
+# 
+# # select variables I want to use, save to publish along code
+# data_daily    <- data %>% select(participantID:dpds32) %>% select(-sleep, -alcohol.daily, -drugs.daily, -starts_with("stress")) # daily
+# data_baseline <- data %>% select(participantID, assessment.date:age, happy, swlsMean, recentTreatment, neoN:neoC) %>% distinct()
+# write.csv(data_daily, here("data", "dd100_daily.csv"))
+# write.csv(data_baseline, here("data", "dd100_baseline.csv"))
+# rm(data)
+
+```
+
 ## Data pre-processing:
 
-###  Participant exclusion:
+Data were pre-processed in order to meet assumptions of the graphical VAR model.
+In graphical VAR, networks are estimated using vectore autoregression.
+As such, in addition to model assumptions pertaining to regression models, it assumes that data are measured at equal distances (lags), and without measurement error.
+TODO: participants that were already excluded by Wright We excluded ... participants whose responses were missing on more than 30 days in total, or more than 15 days at either T1 or T2.
+To meet the assumption of equal distances between measurement points, remaining missing data were imputed using the Kalman Filter [@Harvey1989].
+Kalman imputation has been shown to recover network structures at levels up 50% data missing completely at random [@MansuetoEtAl2020].
 
-Participants with more than 30 days of non-response, or more than 15 in either the first or last 50 days of measurement, will be excluded from the analyses.
-Remaining missing data points of daily diary variables will be imputed using the Kalman Filter [@Harvey1989] , which has been shown to perform well in simulation studies [@MansuetoEtAl2020].
+Graphical VAR modeling further assumes equal means and variances across time (REF), known as the stationarity assumption.
+While many researchers note that this assumption about the process may not be realistic in psychological data, it is generally recommended to transform data to meet this statistical assumption by detrending effects of time.
 
-```{r exludeMissing, message=TRUE, warning=TRUE}
+The effects of data imputation and linear detrending are largely unexplored, but some authors report vastly resulting network structures.
+Detrending a variable changes a variables variance and distribution, because detrended scores reflect a variables deviations from it's linear trend over time (the residuals of linear regression model predicting variable scores by time).
+Because graphical VAR modeling performs variance-covariance decomposition, changes in vairance may result in lower power and potentially biased path estimates if the assumption of stationarity does not hold.
 
+As examining differences in network structures both withing and between people was the main goal of our study, we tried to equalize pro-processing decisions across variables and participants while working in an idiograhic framework.
+Imputation and detrending were performed at the level of the individual across the full 100 days.
+Variables were detrended independently of the magnitude and statistical sagnificance of the time effect.
+
+```{r exludeMissing, eval = FALSE}
 data  <- data_daily
 N     <- length(unique(data$participantID))
+
 # count nr of missing per px
 idx_missing <- matrix(NA, N, 7)
-colnames(idx_missing) <- c("ID", "CompletedTotal", "CompletedT1", "CompletedT2", "Include", "Var_Tasks_T1", "Var_Tasks_T2")
+colnames(idx_missing) <- c("ID", 
+                           "CompletedTotal", 
+                           "CompletedT1", 
+                           "CompletedT2", 
+                           "Include", 
+                           "Var_Tasks_T1", 
+                           "Var_Tasks_T2")
 
 for (p in 1:N){
   # ID
@@ -290,7 +352,8 @@ for (p in 1:N){
   idx_missing[p,6] <- var(d3$tasks, na.rm = T) > 0
   d4 <- filter(d, day.response %in% 51:100)
   idx_missing[p,7] <- var(d4$tasks, na.rm = T) > 0
-  # Include; TRUE if more than 70 responses overall, and more than 35 both T1 and T2, and non-zero var in 'tasks'
+  # Include; TRUE if more than 70 responses overall, 
+  # and more than 35 both T1 and T2, and non-zero var in 'tasks'
   idx_missing[p,5] <- idx_missing[p,2]>70 &
                       idx_missing[p,3]>35 &
                       idx_missing[p,4]>35 &  
@@ -299,7 +362,9 @@ for (p in 1:N){
 }
 
 # included IDs
-idx_included <- idx_missing %>% as.data.frame() %>% filter(Include == TRUE)
+idx_included <- idx_missing %>% 
+  as.data.frame() %>% 
+  filter(Include == TRUE)
 
 # exclude participants
 data <- filter(data, participantID %in% idx_included$ID)
@@ -321,24 +386,42 @@ data$NegAffect <- (data$afraid + data$nervous + data$hostile +
 data$StressSev <- (data$severe1 + data$severe2 + data$severe3 +
                    data$severe4 + data$severe5 + data$severe6 + data$severe7) / 7
 
-data_daily_raw <- data # keep copy of data after exclusion of participants
+data_daily_raw <- data; rm(data) # keep copy of data after exclusion of participants
+
+#------------------------------------------------------------------------
+# rename participant IDs Baseline with same pipeline used for daily data
+#------------------------------------------------------------------------
+data <- data_baseline
+# exclude participants
+data <- filter(data, participantID %in% idx_included$ID)
+# rename IDs for easy looping
+data$participantID <- factor(data$participantID, 
+                      levels = unique(data$participantID), 
+                      labels = 1:length(unique(data$participantID))) %>% 
+                      as.numeric()
+# N: nr participants retained
+N1 <- length(unique(data$participantID))
+data_baseline <- data; rm(data)
+
+saveRDS(data_baseline, file = here("data", "data_baseline.RDS"))
+saveRDS(data_daily_raw, file = here("data", "data_daily_raw.RDS"))
 ```
 
+```{r Kalman, eval = FALSE}
+data      <- data_daily_raw
+emaLabels <- data %>% 
+  select(tasks:dpds32) %>% 
+  colnames()
 
-#### Missing Data Imputation
-
-```{r Kalman, message=TRUE, warning=TRUE}
 #   apply Kalman filter to impute at level of participant, based on full 100d
-emaLabels <- data %>% select(tasks:dpds32) %>% colnames()
-
 library("imputeTS")
 for (p in 1:N){
     for (v in seq_along(emaLabels)){
       if (length(unique(na.omit(data[data$participantID == p, 5+v]))) > 1){
-        data[data$participantID == p, 5+v] <- na_kalman(data[data$participantID == p, 5+v]) # throws error, see Note below
-        # cat("<- T ","ID",p,"var",v, sep = "")   # for check
-      } else  data[data$participantID == p, 5+v] <- unique(na.omit(data[data$participantID == p, 5+v]))
-        # cat("<- F","ID",p,"var",v, sep = "")    # for check
+        data[data$participantID == p, 5+v] <- 
+          na_kalman(data[data$participantID == p, 5+v]) # throws error, see Note below
+      } else  data[data$participantID == p, 5+v] <- 
+          unique(na.omit(data[data$participantID == p, 5+v]))
     }
 }
 
@@ -355,7 +438,8 @@ emaLabels <-  data %>%
               colnames()
 
 data_daily_imputed <- data # keep copy of imputed data
-# TODO: reverse code positive affect for better visual interpretability? 
+
+saveRDS(data_daily_imputed, file = here("data", "data_daily_imputed.RDS"))
 
 # NOTE:
 # error is thrown when assigning imputed data to df:
@@ -370,27 +454,19 @@ data_daily_imputed <- data # keep copy of imputed data
 # cbind( data_daily_imputed[data_daily_imputed$participantID == p, 5+v] , na_kalman(data[data_daily_imputed$participantID == p, 5+v]))
 ```
 
-#### Detrending linear effects
-
-Variables used for network estimation will be linearly detrended across the 100 day time course, at the level of the individual.
-<!-- chose individual bec people are not measured at the same time --> <!-- no detrending for 2 reasons: a) not many study report doing it, the two studies most closely related to mine don't either (Beck Github), and b) I don't think I / we understand how it relates to stationarity vs change in network structure, so I rather not either detrend different time effects in T1 vs T2, vs detrend across T1 and T2 and potentially inflate network similarity bec. why would I in one instance assume the true process is stationary, and in another investigate whether it isn't? HOWEVER Wichers2016 critical transition paper DID detrend and apparently it didnt affect results... mhh. CODE: see email eiko, in dropbox, no attachment-->
-
-```{r detrending, eval=, message=TRUE, warning=TRUE}
+```{r detrending, eval = FALSE}
 
 # We detrend at level of participant, using full 100d, regardless of significance level of linear trend
 data <- data_daily_imputed
 for (p in 1:N) {
   for (v in seq_along(emaLabels)){
-    if ( data[data$participantID == p, 5+v] %>% 
-         is.na() %>% 
-         sum() == 
-         length(data[data$participantID == p, 5+v])) {next} #TODO: find more elegant solution to not evaluate composite scores...
     formula <- as.formula(paste0(emaLabels[v], " ~ 1 + day.response")) # define formula for linear trend
     trend_v <- lm(formula, data = data[data$participantID == p, ]) # fit model per person per var
     data[data$participantID == p, 5+v] <- residuals(trend_v) # detrend 
   }
 }
 data_detrended <- data # keep copy of data after detrending
+saveRDS(data_detrended, file = here("Data", "data_detrended.RDS"))
 
 # NOTE: 
 # To check for significance of alpha, include below code in loop: 
@@ -398,7 +474,7 @@ data_detrended <- data # keep copy of data after detrending
 
 ```
 
-```{r descriptives, message=TRUE, warning=TRUE}
+```{r descriptives, eval = FALSE}
 
 # prepare data frame to store variable descriptives per person per time period
 EMA_descriptives <- data.frame(
@@ -419,47 +495,65 @@ EMA_descriptives <- data.frame(
 
 # extract variable descriptives
 for (p in 1:N){
+  
     raw_T1        <- .filterData("T1", data_daily_raw, p) 
     raw_T2        <- .filterData("T2", data_daily_raw, p)
     imputed_T1    <- .filterData("T1", data_daily_imputed, p)
     imputed_T2    <- .filterData("T2", data_daily_imputed, p)
     detrended_T1  <- .filterData("T1", data_detrended, p)
     detrended_T2  <- .filterData("T2", data_detrended, p)
-  for (v in seq_along(emaLabels)){
-    # dynamic index for EMA_descriptives df
-    idx <- (p-1)*length(emaLabels)+v
-    # proportion completed T1 and T2
-    EMA_descriptives$nr_imputed_T1[idx] <- sum(is.na(raw_T1[ ,5+v]))
-    EMA_descriptives$nr_imputed_T2[idx] <- sum(is.na(raw_T2[ ,5+v]))
-    EMA_descriptives$completed_T1[idx] <- sum(!is.na(raw_T1[ ,5+v]))/50
-    EMA_descriptives$completed_T2[idx] <- sum(!is.na(raw_T2[ ,5+v]))/50
-    # (1-Normality) Raw Variables T1 and T2
-    if (length(unique(na.omit(raw_T1[ ,5+v]))) > 1) {
-            EMA_descriptives$norm_T1[idx] <- 1-shapiro.test(raw_T1[ ,5+v])[[1]] 
-    } else  EMA_descriptives$norm_T1[idx] <- 0
-    if (length(unique(na.omit(raw_T2[ ,5+v]))) > 1) {
-            EMA_descriptives$norm_T2[idx] <- 1-shapiro.test(raw_T2[ ,5+v])[[1]] 
-    } else  EMA_descriptives$norm_T2[idx] <- 0
-    # (1-Normality) Detrended Variables T1 and T2
-    if (length(unique(na.omit(raw_T1[ ,5+v]))) > 1) {
-            EMA_descriptives$norm_detrended_T1[idx] <- 1-shapiro.test(detrended_T1[ ,5+v])[[1]]
-    } else  EMA_descriptives$norm_detrended_T1[idx] <- 0
-    if (length(unique(na.omit(raw_T2[ ,5+v]))) > 1) {
-            EMA_descriptives$norm_detrended_T2[idx] <- 1-shapiro.test(detrended_T2[ ,5+v])[[1]]
-    } else  EMA_descriptives$norm_detrended_T2[idx] <- 0
-    # Means and SDs of raw and imputed, T1 and T2
-    EMA_descriptives$mean_raw_T1[idx]     <- raw_T1[ ,5+v]     %>% mean(na.rm = TRUE)
-    EMA_descriptives$mean_raw_T2[idx]     <- raw_T2[ ,5+v]     %>% mean(na.rm = TRUE)
-    EMA_descriptives$sd_raw_T1[idx]       <- raw_T1[ ,5+v]     %>% sd(na.rm = TRUE) 
-    EMA_descriptives$sd_raw_T2[idx]       <- raw_T2[ ,5+v]     %>% sd(na.rm = TRUE) 
-    EMA_descriptives$mean_imputed_T1[idx] <- imputed_T1[ ,5+v] %>% mean(na.rm = TRUE)
-    EMA_descriptives$mean_imputed_T2[idx] <- imputed_T2[ ,5+v] %>% mean(na.rm = TRUE)
-    EMA_descriptives$sd_imputed_T1[idx]   <- imputed_T1[ ,5+v] %>% sd(na.rm = TRUE) 
-    EMA_descriptives$sd_imputed_T2[idx]   <- imputed_T2[ ,5+v] %>% sd(na.rm = TRUE) 
-  }
+  
+    for (v in seq_along(emaLabels)){
+      
+      # dynamic index for EMA_descriptives df
+      idx <- (p-1)*length(emaLabels)+v
+      
+      # proportion completed T1 and T2
+      EMA_descriptives$nr_imputed_T1[idx] <- sum(is.na(raw_T1[ ,5+v]))
+      EMA_descriptives$nr_imputed_T2[idx] <- sum(is.na(raw_T2[ ,5+v]))
+      EMA_descriptives$completed_T1[idx]  <- sum(!is.na(raw_T1[ ,5+v]))/50
+      EMA_descriptives$completed_T2[idx]  <- sum(!is.na(raw_T2[ ,5+v]))/50
+      
+      # (1-Normality) Raw Variables T1 and T2:
+      if (length(unique(na.omit(raw_T1[ ,5+v]))) > 1) {
+              EMA_descriptives$norm_T1[idx] <- 
+                1-shapiro.test(raw_T1[ ,5+v])[[1]] 
+      } else  EMA_descriptives$norm_T1[idx] <- 0
+      if (length(unique(na.omit(raw_T2[ ,5+v]))) > 1) {
+              EMA_descriptives$norm_T2[idx] <- 
+                1-shapiro.test(raw_T2[ ,5+v])[[1]] 
+      } else  EMA_descriptives$norm_T2[idx] <- 0
+      # (1-Normality) Detrended Variables T1 and T2
+      if (length(unique(na.omit(raw_T1[ ,5+v]))) > 1) {
+              EMA_descriptives$norm_detrended_T1[idx] <- 
+                1-shapiro.test(detrended_T1[ ,5+v])[[1]]
+      } else  EMA_descriptives$norm_detrended_T1[idx] <- 
+        0
+      if (length(unique(na.omit(raw_T2[ ,5+v]))) > 1) {
+              EMA_descriptives$norm_detrended_T2[idx] <- 
+                1-shapiro.test(detrended_T2[ ,5+v])[[1]]
+      } else  EMA_descriptives$norm_detrended_T2[idx] <- 
+        0
+      
+      # Means and SDs for T1 and T2:
+      EMA_descriptives$mean_raw_T1[idx]     <- raw_T1[ ,5+v]     %>% mean(na.rm = TRUE)
+      EMA_descriptives$mean_raw_T2[idx]     <- raw_T2[ ,5+v]     %>% mean(na.rm = TRUE)
+      EMA_descriptives$sd_raw_T1[idx]       <- raw_T1[ ,5+v]     %>% sd(na.rm = TRUE) 
+      EMA_descriptives$sd_raw_T2[idx]       <- raw_T2[ ,5+v]     %>% sd(na.rm = TRUE)
+      
+      EMA_descriptives$mean_imputed_T1[idx] <- imputed_T1[ ,5+v] %>% mean(na.rm = TRUE)
+      EMA_descriptives$mean_imputed_T2[idx] <- imputed_T2[ ,5+v] %>% mean(na.rm = TRUE)
+      EMA_descriptives$sd_imputed_T1[idx]   <- imputed_T1[ ,5+v] %>% sd(na.rm = TRUE) 
+      EMA_descriptives$sd_imputed_T2[idx]   <- imputed_T2[ ,5+v] %>% sd(na.rm = TRUE)
+      
+      EMA_descriptives$mean_detrended_T1[idx] <- detrended_T1[ ,5+v] %>% mean(na.rm = TRUE)
+      EMA_descriptives$mean_detrended_T2[idx] <- detrended_T2[ ,5+v] %>% mean(na.rm = TRUE)
+      EMA_descriptives$sd_detrended_T1[idx]   <- detrended_T1[ ,5+v] %>% sd(na.rm = TRUE) 
+      EMA_descriptives$sd_detrended_T2[idx]   <- detrended_T2[ ,5+v] %>% sd(na.rm = TRUE) 
+   }
 }
 
-# rank stat raw data
+# compute rank stat raw data
 EMA_descriptives$rank_stat <- EMA_descriptives$completed_T1 * 
                               EMA_descriptives$completed_T2 * 
                               EMA_descriptives$norm_T1 * 
@@ -470,6 +564,8 @@ EMA_descriptives$rank_stat_detrended <- EMA_descriptives$completed_T1 *
                                         EMA_descriptives$completed_T2 * 
                                         EMA_descriptives$norm_detrended_T1 * 
                                         EMA_descriptives$norm_detrended_T2
+
+cor(EMA_descriptives$rank_stat, EMA_descriptives$rank_stat_detrended) # .96, so shouldn't make a difference
 
 saveRDS(EMA_descriptives, file = here("Data", "EMA_descriptives.RDS"))
 
@@ -482,41 +578,51 @@ saveRDS(EMA_descriptives, file = here("Data", "EMA_descriptives.RDS"))
 # Because we want to prioritize more normally distributed variables, we use 1-ShapiroWilk.
 # As result, a higher rank statistic means better properties.
 ```
+
 ## Network estimation
+
+Networks were estimated using the R package *graphicalVAR* [@EpskampEtAl2018b].
+Graphical VAR models belong to a wider family of partial correlation networks.
+Edges are modeled as partial correlations between variables using vector autoregression.
+Graphical VAR estimates two types of networks: First, a temporal network of lagged effects is derived.
+Each variable in the network is modeled as a function of all other variables in the network at the previous lag (in our days, the previous day), including itself.
+Edges are thus directed, can be positive or negative, and meet assumptions of granger-causality (REF).
+Second, a comtemporaneous network is derived by ..
+residual.
+<!--# explain more and don't forget to mention regularization and glasso -->
 
 ### Variable selection for idiographic networks
 
-Because we expect high heterogeneity in sample in terms of which items apply to an individual's experience and variables with high negative skew (e.g. most responses being zero) are problematic for model estimation (violates model assumptions and can lead to non-convergence).
-We further want to make the variable selection process reproducible by basing the decision process on statistical criteria.
-Selecting variables purely based on statistical properties may result in networks that include only highly similar, closely related variables.
-Also, as resulting estimates of network stability depend on which variables are included in the network, having vastly different idiographic networks may confound these estimates.
+The diary data used in this study consists of a broad set of variables assessed in a comparably small and heterogeneous sample.
+We selected variables which were most suited for our research question and model requirements.
+Variables with high negative skew (e.g. most responses being zero) are generally problematic for model estimation, as they violates the model's assumption of multivariate normality and can lead to model non-convergence.
+We further wanted to make the variable selection process reproducible by basing the decision process on statistical criteria.
+Selecting variables purely based on statistical properties would have likely resulted in networks that include only highly similar, closely related variables, which is again problematic for model estimation.
+Also, as resulting estimates of network stability depend on which variables are included in the network, selecting vastly different variables across individuals would have confounded our comparisons of network stability.
 Therefore, want to optimize variable selection in a way that makes idiographic networks somewhat comparable across individuals, while capturing the unique behaviors that are related to individual psychopathology.
-We thus took a hybrid approach of variable selection based ontheoretical as well as statistical grounds:
+We thus took a hybrid approach of variable selection based on theoretical as well as statistical grounds:
 
-Each idiographic network will include 3 composite variables (sum scores) which are common across participants: Positive Affect, Negative Affect, and Stress Severity.
-Further, we will include single-item variable capturing daily functioning.
-Per subject, two additional variables will be selected according to their rank on the following scoring algorithm:
+We constrained ouservelves to include six predictors, based on recent simulation work suggesting that graphical VAR performs well in recovering network structures of this size in comparibly small N=1 time series data <!--# cite mansueto and give detail on N in her work -->.
+Each idiographic network included three composite variables (mean scores) which were expected to fluctuate similarly across participants: Positive Affect, negative Affect, and daily stress.
+We also included a single-item variable capturing daily functioning.
+Next, two additional variables will be selected per subject according to their rank on the following scoring metric:
 
-Ranking metric = 1-Shapiro-Wilk test statistic T1 \* 1-Shapiro-Wilk test statistic T2 \*prop completed assessments T1 \* proportion completed assessments T2
+Ranking metric = 1-Shapiro-Wilk test statistic T1 \* 1-Shapiro-Wilk test statistic T2 \* prop completed assessments T1 \* proportion completed assessments T2
 
 The Shapiro-Wilk test statistic tests the null hypothesis that a variable is sampled from a normal distribution, ranging from 0 to 1 [@YaziciYolacan2007, @ShapiroWilk1965].
-<!-- Note: Normality of variables is not necessary for estimation, but strong deviations from normality (such as strong negative skew or little variance can contribute to model non-convergence, especially in relatively small samples such as here -->
+Capturing the items mean and variance in this way, we wanted to select variables with minimal skew and maximal variance for a given individual.
+These criteria were balanced against levels of missingness, because more missing and therefore imputed data would likely confound our network comparisons.
+For that reason, we also wanted to avoid variables which comparably much missing data, or different means and variances, in the first or second half of the timeline.
 
-### Network estimation
+### Network specification
 
-Idiographic network models will be estimated on an individual basis.
-Contemporaneous and temporal (Lag-1) associations will be estimated in form of a Gaussian Graphical Model using the open-source R package *graphicalVAR* [@EpskampEtAl2018b].
-<!-- cite R, todo: summarize how GVAR is estimated --> Lag-1 VAR models estimate temporal associations by predicting each variable by all variables in the network at the previous time point, including itself, using multivariate linear regression.
-The tuning parameter $/gamma$, controlling the degree of regularization, will be set to 0.5 (default in R).
-Should this result in predominantly empty networks, $/gamma$ will be reduced to 0.25 or 0.
-All applied variations to $/gamma$ and their effects on the results will be reported.
+Idiographic network models were estimated separately for T1 and T2, on an individual basis.
+Models regularized using BIC by setting the ... gamma to 0.
+The tuning parameter lambda, controlling the penalty term applied by gLasso, was set to 0.025.
 
-<!-- Other methods to estimate idiographic network models exist, which each their own benefits. In contrast to multilevel network estimation, which may be preferred for it's ability to estimate indivududal networks while borrowing infomation from the group-level and requires less data points @EpskampEtAl2018b. However, in multilevel modeling, individual networks are restricted to have the same structure across individuals, which is an unlikely assumption in our heterogeneous sample.-->
+<!-- Other methods to estimate idiographic network models exist, which each their own benefits. In contrast to multilevel network estimation, which may be preferred for it's ability to estimate individual networks while borrowing infomation from the group-level and requires less data points @EpskampEtAl2018b. However, in multilevel modeling, individual networks are restricted to have the same structure across individuals, which is an unlikely assumption in our heterogeneous sample.-->
 
-<!--- recode network variables so that more score is worse (eg recode positive affect and daily functioning to reverse)
--->
-
-```{r NetworkEstimation, message=TRUE, warning=TRUE}
+```{r NetworkEstimation, eval = FALSE}
 
 # empty data frame to store path estimates in long format (two rows per participant, 1 for T1, 1 for T2)
 networks <- data.frame("ID" = rep(1:N, each=2),
@@ -581,10 +687,12 @@ networks <- data.frame("ID" = rep(1:N, each=2),
 # index columns for contemporaneous network (PPC: 3:17) and temporal networks (PDC 18:53) in Networks df
 idx_PCC <- 3:17
 idx_PDC <- 18:53
+
 # data frame for main outcome statistics
 comparisons <- data.frame(participantID = 1:N)
 
-# Specification a la BeckJohnson2020, gamma = 0, Lambda range 0.025 to 1
+# fit networks. 
+# Specification a la BeckJackson2020, gamma = 0, Lambda range 0.025 to 1
 for (p in 1:N){
   # if( p %in% c(4)) { next }
   # filter data by participant
@@ -639,12 +747,15 @@ for (p in 1:N){
                           lambda_beta = seq(.025, 1, .0125)
                           )
   cat(paste("T2 participant",p ,"converged"))
+  
   # store full network objects in global environment for later inspection
   assign(paste0("ID",p,"_T1"), netw_T1)
   assign(paste0("ID",p,"_T2"), netw_T2)
+  
   # save network objects for detailed inspection / plotting
   saveRDS(netw_T1, here("data", "network_objects", paste0("ID",p,"_T1.RDS")))
   saveRDS(netw_T2, here("data", "network_objects", paste0("ID",p,"_T2.RDS")))
+  
   # extract path estimates for easy comparison
   networks[networks$ID == p, idx_PCC] <-
     rbind(netw_T1$PCC[lower.tri(netw_T1$PCC)] %>%
@@ -669,24 +780,33 @@ for (p in 1:N){
   networks$BIC[networks$ID == p] <- rbind( netw_T1$EBIC, netw_T2$EBIC)
 }
 
+```
+
+```{r NetwComparisons, eval = FALSE}
+# Network descriptives:
+## empty edges
 networks$nr_zero_PCC        <- rowSums(networks[ ,idx_PCC] == 0)
 networks$nr_zero_PDC        <- rowSums(networks[ ,idx_PDC] == 0)
-networks$nr_estimated_PCC   <- rowSums(networks[ ,idx_PCC] != 0)
-networks$nr_estimated_PDC   <- rowSums(networks[ ,idx_PDC] != 0)
+## proportion of empty edges
 networks$pr_zero_PCC        <- rowMeans(networks[ ,idx_PCC] == 0) * 100 %>% as.numeric() %>%round( digits = 2)
 networks$pr_zero_PDC        <- rowMeans(networks[ ,idx_PDC] == 0) * 100 %>% as.numeric() %>%round( digits = 2)
+## estimated edges total
+networks$nr_estimated_PCC   <- rowSums(networks[ ,idx_PCC] != 0)
+networks$nr_estimated_PDC   <- rowSums(networks[ ,idx_PDC] != 0)
+## estimated positive edges
 networks$nr_pos_PCC         <- rowSums(networks[ ,idx_PCC] > 0)
 networks$nr_pos_PDC         <- rowSums(networks[ ,idx_PDC] > 0)
+## estimated positive edges
 networks$nr_neg_PCC         <- rowSums(networks[ ,idx_PCC] < 0)
 networks$nr_neg_PDC         <- rowSums(networks[ ,idx_PDC] < 0)
+## "Connectivity (% possible edges)" a la EpskampEA False Alarm paper
 networks$connectivity_PCC   <- round( networks$nr_estimated_PCC /length(idx_PCC) * 100, 2)
 networks$connectivity_PDC   <- round( networks$nr_estimated_PDC /length(idx_PDC) * 100, 2)
   
-sum(networks$pr_zero_PCC == 100) # 1 empty contemp net total
-sum(networks$pr_zero_PDC == 100) # 46 empty temp net total
+NrEmptyPCC <- sum(networks$pr_zero_PCC == 100) # 1 empty contemp net total
+NrEmptyPDC <- sum(networks$pr_zero_PDC == 100) # 46 empty temp net total
 
-saveRDS(networks, file = here("data", "networks.RDS"))
-
+# Compute networks comparison statistics
 for (p in 1:N) {
   # dynamic index for T1 and T2 rows per person in 'networks' data frame
   idx_p_T1  <- (p-1)*2+1
@@ -695,9 +815,12 @@ for (p in 1:N) {
   PCC_T2    <- networks[idx_p_T2, idx_PCC] %>% as.numeric()
   PDC_T1    <- networks[idx_p_T1, idx_PDC] %>% as.numeric()
   PDC_T2    <- networks[idx_p_T2, idx_PDC] %>% as.numeric()
-  # correlation of edge weights
+  # correlation of all edge weights
   comparisons$PCCs_cor[p] <- cor(PCC_T1, PCC_T2, method = "spearman")  
   comparisons$PDCs_cor[p] <- cor(PDC_T1, PDC_T2, method = "spearman") 
+  # Correlation non-zero edge weights
+  comparisons$PCCs_cor_non0[p] <- cor(PCC_T1[PCC_T1!=0&PCC_T2!=0],PCC_T2[PCC_T1!=0&PCC_T2!=0], method = "spearman")
+  comparisons$PDCs_cor_non0[p] <- cor(PDC_T1[PDC_T1!=0&PDC_T2!=0],PCC_T2[PDC_T1!=0&PDC_T2!=0], method = "spearman")
   # Jaccard similarity, https://en.wikipedia.org/wiki/Jaccard_index#Similarity_of_asymmetric_binary_attribute
   # proportion of shared non-zero edges relative to number of edges which are non-zero in either, but not both, networks 
   comparisons$PCCs_Jaccard[p] <-   sum(PCC_T1!=0 & PCC_T2!=0) / sum(PCC_T1!=0 | PCC_T2!=0)
@@ -705,178 +828,424 @@ for (p in 1:N) {
   # proportion empty edges both netw
   comparisons$PCCs_prop_empty[p]     <- mean( PCC_T1 == 0 & PCC_T2 == 0)
   comparisons$PDCs_prop_empty[p]     <- mean( PDC_T1 == 0 & PDC_T2 == 0)
-  # proportion of edges with equal sign or both zeroin network
+  # proportion of edges with equal sign or both zero in network
   comparisons$PCCs_prop_equ_sign[p]  <- mean( (PCC_T1 == 0 & PCC_T2 == 0) |
                                            (PCC_T1 > 0 & PCC_T2 > 0) |
                                            (PCC_T1 < 0 & PCC_T2 < 0))
   comparisons$PDCs_prop_equ_sign[p]  <- mean( (PDC_T1 == 0 & PDC_T2 == 0) |
                                            (PDC_T1 > 0 & PDC_T2 > 0) |
                                            (PDC_T1 < 0 & PDC_T2 < 0))
+  # proportion of edges with equal sign, excluding zeros
+  comparisons$PCCs_prop_equ_sign_non0[p]  <- mean((PCC_T1 > 0 & PCC_T2 > 0) |
+                                           (PCC_T1 < 0 & PCC_T2 < 0))
+  comparisons$PDCs_prop_equ_sign_non0[p]  <- mean((PDC_T1 > 0 & PDC_T2 > 0) |
+                                           (PDC_T1 < 0 & PDC_T2 < 0))
+  # BIC avg across T1 and T2
   comparisons$avg_BIC[p] <- networks[networks$ID==p, 54] %>% mean()
 }
 
+# compute difference in normality scores of composite variables
+#  EMA_descriptives %>% 
+#    filter(emaLabels == "PosAffect") %>%
+#    transmute(participantID = as.integer("ID"), 
+#              diff_norm_PA = norm_T1 - norm_T2) %>%
+#    left_join(comparisons, by = "participantID")
+#  
+#  comparisons$diff_norm_NA <- EMA_descriptives %>% 
+#    filter(emaLabels == "NegAffect") %>%
+#    transmute(norm_T1 - norm_T2) 
+#  
+#  comparisons$diff_norm_Stress <- EMA_descriptives %>% 
+#    filter(emaLabels == "StressSev") %>%
+#    transmute(norm_T1 - norm_T2)
+#  
+#  comparisons$diff_norm_Tasks <- EMA_descriptives %>% 
+#    filter(emaLabels == "tasks") %>%
+#    transmute(norm_T1 - norm_T2) 
+
+saveRDS(networks, here("data", "networks.RDS"))
 saveRDS(comparisons, here("data", "comparisons.RDS"))
 
-# checl sascha False Alarm code https://osf.io/xh87b/
+# check sascha False Alarm code https://osf.io/xh87b/
 # check sForbes Quantifying code https://osf.io/qcrjk/
+```
 
-# mean mode median, sd
-# rank roder correlation: rank edgeweights and correlate their ranks with spearman
-####################
-# extract metrics per network
-# density
-# proportion empty edges
+## RQ1: Network comparisons
 
-# comparisons
-# correlation adj matr PCC
-# correlation adj matr PDC
-# 
-# prop of edges that are estimated as empty, positive or negative in both networks =
-# jacqard similarity: (count of agreeing categories)/ (count of all edges)
-# 
-####################
-# save network objects (for later), here("data",)
-# assign(paste0("ID",p,"_T1"), netw_T1) #4.4mb per netw
-# save RDS in subfolder using here()
+As an index of temporal stability, we compare idiographic networks estimated for the first and last 50 days of measurement by correlating estimated network edge weights.
+<!-- QUESTION EIKO Do we need Fishers R to Z transformation to transform correlations to normal distr for the regression? Beck does it in her Covid paper -->
 
-# TODO build in option for empty networks and non-converging networks
+-   explain comparison metrics used and their meaning
 
-# kappa matrix  is partial contemp corr PCC
-# beta matrix is partical directed correlations PDC
-# 
-# compute comparison metric, see Mansueto code for examples
-# vechs(cont) for contemp netw
+-   explain why we don't look at scentrality trength indices and their corrs?
 
-# TODO plot networks
-# Names for the Plot :
-names <- c("PA", "NA", "Stress", "Tasks", toupper(Rank1), toupper(Rank2) )
+## RQ2: Regression
+
+```{r antecendents}
+
+data_merged <- inner_join(data_baseline, comparisons, by = "participantID")
+saveRDS(data_merged, here("data", "data_merged.RDS"))
+
+predictors  <- "~ 1 + gender + age + recentTreatment + happy + swlsMean + neoN + neoE + neoO + neoA + neoC + nr_imputed + avg_BIC + PCCs_prop_empty"
+# predictors  <- "~ 1 + gender + age + recentTreatment + happy + swlsMean + neoN + neoE + neoO + neoA + neoC + nr_imputed + avg_BIC + PCCs_prop_empty + diff_norm_PA + diff_norm_NA + diff_norm_Stress + diff_norm_Tasks"
+
+fit.Cor         <- lm(formula = as.formula(paste0("PCCs_cor", predictors)), data = data_merged) %>% lm.beta()
+fit.CorNon0     <- lm(formula = as.formula(paste0("PCCs_cor_non0", predictors)), data = data_merged) %>% lm.beta()
+fit.Jacc        <- lm(formula = as.formula(paste0("PCCs_Jaccard", predictors)), data = data_merged) %>% lm.beta()
+fit.EquSign     <- lm(formula = as.formula(paste0("PCCs_prop_equ_sign", predictors)), data = data_merged) %>% lm.beta()
+fit.EquSignNon0 <- lm(formula = as.formula(paste0("PCCs_prop_equ_sign_non0", predictors)), data = data_merged) %>% lm.beta()
+
+```
+
+<!--# mention that we'll only look at PCCs in detail now -->
+
+<!--# QUESTION EIKO: I didn't end up including all predictors below - would you have included different predictors that what I chose? -->
+
+The following baseline variables will be included tested as predictors: - Sex - Age - past six months: Happy - past six months: Mobility - past six months: Impulse - past six months: Relationships - past six months: Work - past week: Suicidality - past year: Operation - Handicap - Cigarette - Alcohol - Substance - Time since last psychological treatment (including "never") - Treatment provider (as ordinal scale) - Comorbid / previously diagnosed depression - Comorbid / previously diagnosed Anxiety - Comorbid / previously diagnosed Substance abuse or other addiction (merge level 2 and 3, see codebook) - Comorbid / previously diagnosed Schizophrenia - Comorbid / previously diagnosed Eating Disorder - Relationship / Family problems - Life Satisfaction (Mean, Satisfaction with Life Scale) - Neuroticism (NEO-FFI) - Extraversion (NEO-FFI) - Openness (NEO-FFI) - Agreeableness (NEO-FFI) - Conscientiousness (NEO-FFI) The following statistical aspects will be included as predictors: - Total number of imputed data points per individual: Due to the imputation process, higher proportions of missing data may inflate estimates of temporal stability
+
+-   perhaps include means and variances of items as well, or changes in those over time,? Eg change in normality statistic for the 4 composite variables would be interesting
+
+# Results
+
+### Sample
+
+-   nr px exluded and why
+-   final N
+-   demographics
+-   TABLE: Means, Variances, Missing, for T1 and T2 RAW
+-   Means, Variances, Missing, for T1 and T2 after imputation and detrending in APPENDIX
+-   briefly report imputation (changes in means and variances?)
+
+## Network estimation
+
+-   Brief summary of estimation process: with which parameters did model converge or not? provide estimates with different gamma and lamba in Appendix, together with violin plots ( als dots ) of outcome variables (nr of empty networks, failed convergions, and plots of outcome measures)
+-   describe resulting networks (prop empty edges etcs
+-   convergence
+-   nr of empty networks
+
+## RQ1: Network comparisons
+
+-   explain dot plot and interpret values in context of that the indices measure
+-   interpret variability
+-   report mean, median, sd of the indices
+-   -\> TABLE: Network descriptives for T1 and T2, PCC and PDCs + comparison metrics (mean, med, sd) across people
+
+```{r comparisonsplot}
+cors <- comparisons %>%
+  select(PCCs_cor,  PCCs_cor_non0, PCCs_Jaccard, PCCs_prop_equ_sign_non0) %>%
+  gather()
+  
+ggplot(cors, aes(x = key, y = value, fill = key)) +
+  geom_violin(alpha = 0.5) +
+  geom_dotplot(binaxis= "y",
+               stackdir = "center",
+               dotsize = 0.5,
+               fill = 1) +
+  theme(legend.position = "top") +
+  theme_apa()
+  
+# make pretty... labels, legend etc
+```
+
+## Two examples
+
+-   explain how were examples chosen: similar and rather small prop emtpy (both \< 0.55), both only few imputed data points (less than 5 data points)
+
+```{r examplePx, eval = FALSE}
+# choose 2 participants with high vs low PCC cor, but similar density
+data_merged %>%
+  filter(
+    PCCs_prop_empty < 0.55,
+    nr_imputed < 5
+  ) %>% arrange (PCCs_cor)
+# 53 low  cor 0.1823801,  dpds25 dpds21
+# 45 high cor 0.6480437, passive dpds24
+# ebics most similar in t1 and t2
+
+```
+
+### Low temporal stability: Participant 53
+
+-\> PLOT: Networks and timeseries data
+
+-   table with participants means, vars, demographics
+-   explain and interpret plots
+
+```{r plotPx53Netws}
+# set par to 2 * 2
+# DPDS25: I acted on impulse while feeling upset.
+# DPDS21: I worried about being abandoned.
+
+# qgraph arguments:
+
+names <- c("PA", "NA", "Stress", "Task", "Impuls", "Worry")
+plotcolours <- c('#a6d854','#66c2a5','#fc8d62','#8da0cb','#ffd92f',"#e78ac3")
+# Define equal max edge weight fpr plots Px 53 and 45
+maxEdge <- networks %>% filter( ID %in% c(53, 45)) %>%
+  select(idx_PCC)  %>% abs() %>% max() 
+
+par(mfrow = c(1,2))
+
+# 53 low 0.1823801 low;  dpds25 dpds21 
+Px53_T1 <- ID53_T1$PCC %>%
+  qgraph(maximum = maxEdge, 
+         # details = TRUE, 
+         theme="colorblind",
+         title = "Days 1 to 50",
+         negDashed = TRUE,
+         color = plotcolours
+        #labels = names,
+         #nodeNames =c("Positive Affect", "Negative Affect", "Stress", "Impairment daily tasks", "Impulsive while upset", "Worry about abandonment")
+  )
+Px53_T2 <- ID53_T2$PCC %>%
+  qgraph(maximum = maxEdge, 
+         details = TRUE, 
+         theme="colorblind",
+         title = "Days 51 to 100",
+         negDashed = TRUE,
+         color = plotcolours,
+         labels = names,
+         nodeNames =c("Positive Affect", "Negative Affect", "Stress", "Impairment daily tasks", "Impulsive while upset", "Worry about abandonment")
+  )
 
 # for plots, fix layout and node strength for comparability
 # qgraph(netw_T1$PCC,  layout = "circle", nonsig = "hide", theme = "colorblind", title = "Contemporaneous", labels = names, vsize = 10,  asize = 10, mar = c(5,5,5,5)) 
 
 ```
 
-## RQ1: Network comparisons
+```{r plotPx53Descr}
+# DPDS25: I acted on impulse while feeling upset.
+# DPDS21: I worried about being abandoned.
 
-As an index of temporal stability, we compare idiographic networks estimated for the first and last 50 days of measurement by correlating estimated network edge weights.
-Other conceptualizations and tests of network similarity have been proposed, the most popular one being the Network Comparison Test (NCT, @vanBorkuloEtAl2017 ).
-<!-- Do we need Fishers R to Z transformation to transform correlations to normal distr for the regression? Beck does it in her Covid paper -->
-<!-- when comparing the matrices, need to remove diagnonal!!! for contemporaneous netwokrs -->
-TODO: explain comparison metrics used and their meaning
-TODO: briefly mention Frumkin discussion for context
+# Behavior and DPD vars are on 0:7 already
+dataPX53 <- data_daily_raw %>% 
+filter( participantID==53, day.response %in% 1:100) %>%
+  # rescale to range 0-7 for plotting, with 7 reflecting highest score of this participant
+  mutate(PosAffect_rescaled = PosAffect * 1/max(na.omit(PosAffect)),
+         NegAffect_rescaled = NegAffect * 1/max(na.omit(NegAffect)),
+         StressSev_rescaled = StressSev * 1/max(na.omit(StressSev)),
+         tasks_rescaled     = tasks * 1 /max(na.omit(tasks)),
+         dpds25 = dpds25 * 1 /max(na.omit(dpds25)),
+         dpds21 = dpds21 * 1 /max(na.omit(dpds21)),
+         ) %>%
+  select(day.response, 
+         PosAffect_rescaled, 
+         NegAffect_rescaled, 
+         StressSev_rescaled, 
+         tasks_rescaled, 
+         dpds25, 
+         dpds21) %>% 
+  rename("Positive Affect" = PosAffect_rescaled,
+         "Negative Affect" = NegAffect_rescaled,
+         "Stress" = StressSev_rescaled,
+         "Impairment daily tasks" = tasks_rescaled,
+         "Impulsive while upset" = dpds25,
+         "Worry about abandonment" = dpds21) %>%
+  melt( id.vars = "day.response") %>% 
+  rename( "Variable" = variable)
 
-
-## RQ2: Regression
-```{r antecendents}
-
-######################################################################
-#### rename participant ID with same pipeline used for daily data ####
-data <- read.csv(here("data", "dd100_baseline.csv")) %>% select(-X)
-# included IDs
-idx_included <- idx_missing %>% as.data.frame() %>% filter(Include == TRUE)
-# exclude participants
-data <- filter(data, participantID %in% idx_included$ID)
-# rename IDs for easy looping
-data$participantID <- factor(data$participantID, 
-                      levels = unique(data$participantID), 
-                      labels = 1:length(unique(data$participantID))) %>% 
-                      as.numeric()
-# N: nr participants retained
-N1 <- length(unique(data$participantID)) #79
-data_baseline <- data
-######################################################################
-
-data_merged <- inner_join(data_baseline, comparisons, by = "participantID")  
-
-fit <- lm(formula = PCCs_cor ~ 1 + gender + age + happy + swlsMean + neoN + neoE + neoO + neoA + neoC + nr_imputed + avg_BIC, data = data_merged
-     )
-summary(fit)
-
+par(mfrow = c(1,1))
+dataPX53 %>%  ggplot(
+  aes(x = day.response, y = value, colour = Variable, group=Variable)
+  ) +
+  geom_line() +
+  coord_fixed(ratio = 1000/70) +
+  theme_apa(box = TRUE) +
+  theme(legend.position="top") +
+  labs( x = "Day", y = "Rating (scaled)") +
+  scale_color_manual(values= plotcolours)
 ```
 
-The following baseline variables will be included tested as predictors: - Sex - Age - Income - past six months: Happy - past six months: Mobility - past six months: Impulse - past six months: Relationships - past six months: Work - past week: Suicidality - past year: Operation - Handicap - Cigarette - Alcohol - Substance - Time since last psychological treatment (including "never") - Treatment provider (as ordinal scale) - Comorbid / previously diagnosed depression - Comorbid / previously diagnosed Anxiety - Comorbid / previously diagnosed Substance abuse or other addiction (merge level 2 and 3, see codebook) - Comorbid / previously diagnosed Schizophrenia - Comorbid / previously diagnosed Eating Disorder - Relationship / Family problems - Life Satisfaction (Mean, Satisfaction with Life Scale) - Neuroticism (NEO-FFI) - Extraversion (NEO-FFI) - Openness (NEO-FFI) - Agreeableness (NEO-FFI) - Conscientiousness (NEO-FFI) The following statistical aspects will be included as predictors: - Total number of imputed data points per individual: Due to the imputation process, higher proportions of missing data may inflate estimates of temporal stability
-<!-- perhaps include means and variances of items as well, but difficult to code.-->
+### High temporal stability: Participant 45
 
-To test which person-specific attributes or statistical factors predict temporal network stability, we use predictive regression with least absolute shrinkage and selection operator (LASSO, @Tibshirani1996, @McNeish2015 ) regularization.
-In predictive regression, a model is optimized for it's ability to predict the outcome variable in a novel sample [@WestfallYarkoni2016].
-This is in contrast to the more commonly used explanatory regression, in which model parameters are optimized to explain maximum variance in the observed sample, which can lead to overfitting and poor out-of sample utility.
-LASSO regularization shrinks small beta coefficients to zero, effectively excluding less relevant predictors from the model.
-The amount of shrinkage applied, determined by the tuning parameter lambda, is optimized for predictive accuracy using K-fold cross-validation.
-Using LASSO regularization, we can explore a wide range of potential predictors while selecting a parsimonious model without relying om arbitrary significance cut-offs or prior theory for variable selection.
-Data will be spit at random into a training set (80% of cases) and test set (20% of cases), fixing the random number generator at 1821 for reproducibility of the analysis.
-The training set will be used for model estimation using K-fold cross validation with 5 folds.
-Missing data (e.g. due to network model non-convergence or missing baseline variables) will be handled using listwise deletion.
-The model with least prediction error during cross validation will be tested for out-of sample predictive accuracy in the test set.
-If predictive accuracy is satisfactory (root mean squared error $<$.20, meaning predicted correlation coefficients are within +/- .10 of original correlation coefficient estimates 
-<!--arbitrary value, but seemed reasonable: the ROT classifies degrees of correlation strength in steps of 20, so a deviation of 10 would lead to a similar interpretation in these terms)-->, the resulting model will be fit on the complete data set to extract unbiased parameter estimates and estimated variance explained.
-<!-- feedback eiko: no threshold for interpreting model but do mention r^2 and out of sample pred acc-->
+-\> PLOT: Networks and timeseries data
 
-# Results
+-   table with participants means, vars, demographics
+-   explain and interpret plots
 
-## RQ1
-- Brief summary of estimation process: with which parameters did model converge or not? provide estimates with different gamma and lamba in Appendix, together with histograms of outcome variables (nr of empty networks, failed convergions, and plots of outcome measures)
-- for evaluated networks (beckjackson specs): plot cumulative distr of correlations, or histogram, and perhaps a heatmap of the estimated path coefficients ( per person, T1 value of path on X, T2 value on Y, separately for contemp and temporal networks. So here we do not know which path it is, every person has bunch of path coefficients in heatmap)
-- I could also do 1 heatmap / scatterplot per person for the two separate plots
-- demonstrate 2 or 4 cases (eg. highly stable, highly instable, mostly empty, very dense network, and relate it to the metrics. explain what the metrics mean.
-- Also, for those 2 px, provide mean and sd of all items in Table for both time points
-- ! when plotting, impose equal layout and node strength"maximum value of node strength", "identical layouts Fruchterman Reingold algorithm-->
-- visualize all included variables (not rank1 and rank 2) as spaghettiplot per individual across the 100 days. https://www.r-graph-gallery.com/parallel-plot.html
+```{r plotPx45Netws}
+par(mfrow = c(1,2))
+# 45 high 0.6480437,passive dpds24
+names <- c("PA", "NA", "Stress", "Tasks", "Passive", "Unusual")
+maxEdge <- networks %>% filter( ID %in% c(53, 45)) %>%
+  select(idx_PCC)  %>% abs() %>% max()
 
-## RQ2
+Px45_T1 <- ID45_T1$PCC %>%
+  qgraph(maximum = maxEdge, 
+         details = TRUE, 
+         theme="colorblind",
+         title = "Days 1 to 50",
+         negDashed = TRUE,
+         color = plotcolours,
+         labels = names,
+         legend = FALSE,
+         nodeNames =c("Positive Affect", "Negative Affect", "Stress", "Impairment daily tasks", "Passive behavior", "Unusual behavior")
+  )
 
-## Example participants
-- demonstrate 2 or 4 cases (eg. highly stable, highly instable, mostly empty, very dense network, and relate it to the metrics. explain what the metrics mean. And include relevant demographics of contributing factors.
-- Also, for those 2 px, provide mean and sd of all items in Table for both time points
-- ! when plotting, impose equal layout and node strength"maximum value of node strength", "identical layouts Fruchterman Reingold algorithm-->
-- visualize all included variables (not rank1 and rank 2) as spaghettiplot per individual across the 100 days. https://www.r-graph-gallery.com/parallel-plot.html
+Px45_T2 <- ID45_T2$PCC %>%
+  qgraph(maximum = maxEdge, 
+         details = TRUE, 
+         theme="colorblind",
+         title = "Days 51 to 100",
+         negDashed = TRUE,
+         color = plotcolours,
+         labels = names,
+         legend.cex = 0.3,
+         nodeNames =c("Positive Affect", "Negative Affect", "Stress", "Impairment daily tasks", "Passivity", "Doing unusual things")
+  )
+```
+
+```{r plotPx45Descr}
+par(mfrow = c(1,1))
+
+# comparisons %>% filter( participantID %in% c(45)) %>% select(Rank1, Rank2)
+# passive , # dpds24 unusual
+
+# Behavior and DPD vars are on 0:7 already
+dataPX45 <- data_daily_raw %>% 
+filter( participantID==45, day.response %in% 1:100) %>%
+  # rescale to range 0-7 for plotting, with 7 reflecting highest score of this participant
+  mutate(PosAffect_rescaled = PosAffect * 1/max(na.omit(PosAffect)),
+         NegAffect_rescaled = NegAffect * 1/max(na.omit(NegAffect)),
+         StressSev_rescaled = StressSev * 1/max(na.omit(StressSev)),
+         tasks_rescaled     = tasks * 1/max(na.omit(tasks)),
+         passive = passive * 1/max(na.omit(passive)),
+         dpds24 = dpds24 * 1/max(na.omit(dpds24))
+         ) %>%  
+  select(day.response, 
+         PosAffect_rescaled, 
+         NegAffect_rescaled, 
+         StressSev_rescaled, 
+         tasks_rescaled, 
+         passive, 
+         dpds24)  %>% 
+  rename("Positive Affect" = PosAffect_rescaled,
+         "Negative Affect" = NegAffect_rescaled,
+         "Stress" = StressSev_rescaled,
+         "Impairment daily tasks" = tasks_rescaled,
+         "Passive behavior" = passive,
+         "Unusual behavior" = dpds24) %>%
+  melt( id.vars = "day.response") %>% 
+  rename( "Variable" = variable)
+
+dataPX45 %>%  ggplot(
+  aes(x = day.response, y = value, colour = Variable, group=Variable)
+  ) +
+  geom_line() +
+  coord_fixed(ratio = 1000/70) +
+  theme_apa(box = TRUE) +
+  theme(legend.position="top") +
+  labs( x = "Day", y = "Rating (scaled)") +
+  scale_color_manual(values= plotcolours)
+```
+
+## RQ2: Exploratory regression
+
+-   table of beta estimates, R2, p as asterix, and interpretation
+
+```{r regressionResults}
+summary(fit.Cor) # swl + neoc
+summary(fit.CorNon0) # - 
+summary(fit.Jacc) # neoc
+summary(fit.EquSign) # neoc + propempty (duh
+summary(fit.EquSignNon0) # neoc
+```
 
 # Discussion
 
-## Strengths
--> implications *assuming that change scores indeed reflect change in data generating process*
--- assuming that lack of stability is due to instability of data generating process: challenge to idiographic modelling, stationarity assumption and power problems, potential solutions are being developed and needed (multilevel estimation, baysian, timevarying var)
-<!-- mention time varying auto regressive network models @HaslbeckBringmanWaldorp2020 -->
+## Temporal Stability of Idiographic networks
 
--- assuming that stability is because process is stable: we probably don't need to worry about losing power by expanding time window over in this case 100 dates
--- intra-individual variation: changes in network structure may be related to factors related to the individual (eg traits, circumstances, quality of the data, response style... provide list)
+### Implications
 
-## Limitations
-### Exploratory: 
--   limitations of this data set for this research q (e.g. sample size / power)
--   constraints to generalizability (population, designs, time frame, estimation method)
+-   *assuming that change scores indeed reflect change in data generating process*
+
+-   lack of stability poses challenge to idiographic models as useful representation that generalize within an individual, stationarity assumption and power problems, potential solutions are being developed and needed (multilevel estimation, baysian, timevarying var) <!-- mention time varying auto regressive network models @HaslbeckBringmanWaldorp2020 -->
+
+-   implications for power: depending on process of interest, we may lose or gain power depending on T
+
+-   high stability: great, stationarity realistic, gives us more slack in research design (not lose power when extedning measurmeent period?)
+
+-   bet is on dynamics of system, so change itself is of interest.
+    EWS etc...
+
+-   relate to idea of monitoring change, critical slowing down, phase transitions, ROM
+
+-   Variability seems to be a thing
+
+### Possibles explanations
+
+-   intra-individual variation: changes in network structure may be related to factors related to the individual (eg traits, circumstances, quality of the data, response style... provide list), should be addressed in future study designs
+-   Measurement error
+-   Important assumption made by (idiographic) network models is that constructs were measured without error. Little published research on this, but eg. SchreuderEtAl2020 assessed participants interpretation of EMA items over the course of 6 months and concluded interpretation was consistent. Changes in item interpretation also known as measurement invariance or response shift bias. (the other study cited in lauras review)
+-   Conscientiousness? Response style?
+-   stabilitiy as a trait?
+
+## Strengths of the current study
+
+-   some major features made data a good candidate
+-   daily lags equal (opposed to designs using several per day)
+-   consecutive periods where no change should be expected (eg no therapy or intervention etc)
+
+## Limitations of the current study
+
+### Power
+
+-   heterogeneous sample, low power
+-   noisy data:
 -   Kalman imputation assumes MCAR, but likely there is some bias.
--   We focus on similarity of global network structure, but there are many more ways to descibe and interpret networks which may or may not be relevant for replicability: network comparison test, predictive networks models, sensitivity and specificity of recovered edges if true network (assumed to be) known
+-   sources of noise: Imputation, Missingness, MARS,, detrending, Measurement error, sample size
+-   regression underpowered
 
-### Interpretation:
-- what can we conclude from low stability values?
--- cause change in estimates not known: not necessarily instability of process, but possibly also inaccurate estimates and overfitting possible issues (high regularization applied due to low power)
--- high stability: possibly also a chance finding (parameter accuracy) 
+### Constraints to generalizability
+
+-   exploratory work, needs replication
+-   how representive is data for current ESM designs?
+-   Other network methods?
+-   modeling decisions?
+-   conceptualization of model similarity / stability. We focus on similarity of global network structure, but there are many more ways to describe and interpret networks which may or may not be relevant for replicability: network comparison test, predictive networks models, sensitivity and specificity of recovered edges if true network known
 
 ## Future directions
-### Stationarity
-### Detrending
-### Temporal Stability
--   relate to idea of monitoring change, critical slowing down, phase transitions, ROM
-### Parameter accuracy: (eg., a regression coefficiants t-test in a linear model)
--   relate to stationarity assumption
-### Measurement error
--   Important assumption made by (idiographic) network models is that constructs were measured without error. Little published research on this, but eg. SchreuderEtAl2020 assessed participants interpretation of EMA items over the course of 6 months and concluded interpretation was consistent. Changes in item interpretation also known as measurement invariance or response shift bias.
-### stationarity and temporal stability as features / traits of an individual?
--   is extending measurement period instead of increasing frequency a good solution, eg.
-    with planned missingness, or is non-stationarity and low replicability too much of concern?
-    
+
+### Idiographic network models
+
+-   bootstrapping etc for idiographic applications?
+-   measurement error
+-   lasso regularization: empty edge deos not actually imply independence
+-   discussion on centrality measures and problems with those and their interpretation
+-   how to conceptualize replicability, stability, reproducibility
+-   time varying VAR
+-   simulation studies on effects of modeling decisions: variable transformations, detrending, missing data imputation, missing data mechanisms
+
+### Network theory
+
+-   stationarity versus temporal stability and complex dynamics
+-   empirical work on: missing data mechanism
+-   more theoretical groundwork: what kind of things are networks made of? what things to include in the network? What variable properties are desireable, what levels of clustering is desirable?
+-   is a partial correlation a clinically useful concept? (feasibility study)
+-   what model features are a useful metric?
+-   which (changes in) features have clinical relevance, which may be neglected?
+-   EWS as the way forward?
+-   formal case conceptualizations?
+-   how do we expect processes to vary? eg, linear trend is not possible bec range is bound, so extrapolation not possible and detrending necessarily biased by time range measured
+-   oscillation / sine wave? what amplitude and phase?
+
 # Conclusion
--   warrants caution regarding the inferences we draw (momentary impression of item correlations in certain period of time vs. stable process which extends beyond this period and could inform interventions (TODO: related to predictive value of networks?)
+
+-   warrants caution regarding the inferences we draw from idio netw right now, as some would lead to very different interpretations
+-   not well understood why this is the case, whether it's measurement error, item distribution,
+-   it's more a momentary impression of item correlations in certain period of time
+-   stability of process which extends beyond this period and should eg inform interventions needs more work
 
 \newpage
 
 # References
 
-
+```{=tex}
 \begingroup
 \setlength{\parindent}{-0.5in}
 \setlength{\leftskip}{0.5in}
-
-{\#refs custom-style="Bibliography"}
+```
+::: {#refs custom-style="Bibliography"}
+:::
 
 \endgroup
