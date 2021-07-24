@@ -968,7 +968,7 @@ cors <- comparisons %>%
          "Recovered edge signs (%)" = PCCs_prop_equ_sign_non0) %>%
   gather()
 
-pdf("ComparisonViolin.pdf")  
+png("ComparisonViolin.png", width = 200, height = 200, units='mm', res = 300)
 ggplot(cors, aes(x = key, y = value)) +
   geom_abline( slope = 0, intercept = 0, colour = "grey") +
   geom_violin(alpha = 0.3, colour = "white", fill = "grey") +
@@ -992,8 +992,9 @@ TODO EXPLAIN GRAPH AND INTERPRET
 
 (ref:plotBubblePCCCap) Stability metrics for contemporaneous networks as a function of network sparcity.
 
-```{r plotBubblePCC, fig.cap= "(ref:plotBubblePCCCap)", fig.fullwidth=TRUE}
-pdf("bubble.pdf", width = 10, height = 7 )
+```{r plotBubblePCC, fig.cap= "(ref:plotBubblePCCCap)"}
+png("Bubble.png", width = 250, height = 200, units='mm', res = 300)
+
 comparisons %>%
 ggplot( aes(x = PCCs_prop_empty, 
             y = PCCs_cor, 
@@ -1156,7 +1157,7 @@ Means, standard deviations, and changes in distiributions of daily measures for 
 (ref:networks) Contemporaneous network structures of Participant 53 and 45 at T1 and T2.
 
 ```{r ExampleNetw, fig.cap="(ref:networks)"}
-pdf("networks.pdf", width = 15, height = 15)
+png("networks.png", width = 300, height = 300, units='mm', res = 300 )
 layout(matrix(c(1,2,3,4), 2, 2, byrow = T), widths = c(1, 1))
 
 ID53_T1$PCC %>%
@@ -1171,7 +1172,7 @@ ID53_T1$PCC %>%
     negDashed = TRUE,
     color = plotcolours53,
     labels = namesPx53,
-    label.cex = 1,
+    label.cex = 1.3,
     vTrans = 120
     ); #box("figure")
 
@@ -1187,7 +1188,7 @@ ID53_T2$PCC %>%
     negDashed = TRUE,
     color = plotcolours53,
     labels = namesPx53,
-    label.cex = 1,
+    label.cex = 1.3,
     vTrans = 120
  #   nodeNames = c("Positive Affect","Negative Affect" ,"Stress" ,"Impairment daily tasks" ,"Impulsive while upset" ,"Worry about abandonment")
 #    legend.cex = 0.5
@@ -1205,7 +1206,7 @@ ID45_T1$PCC %>%
     negDashed = TRUE,
     color = plotcolours45,
     labels = namesPx45,
-    label.cex = 1,
+    label.cex = 1.3,
     vTrans = 120
     ); #box("figure")
 
@@ -1221,7 +1222,7 @@ ID45_T2$PCC %>%
     negDashed = TRUE,
     color = plotcolours45,
     labels = namesPx45,
-    label.cex = 1,
+    label.cex = 1.3,
     vTrans = 120
  #   nodeNames = c("Positive Affect","Negative Affect" ,"Stress" ,"Impairment daily tasks" ,"Passive behavior" ,"Unusual behavior")
     ); #box("figure")
@@ -1231,8 +1232,7 @@ dev.off()
 ```{r}
  #DPDS25: I acted on impulse while feeling upset.
 # DPDS21: I worried about being abandoned.
-pdf("timeseries.pdf", width = 15, height = 15)
-layout(matrix(c(1,1,2,2), 2, 2, byrow = T))
+png("timeseries53.png", width = 300, height = 100, units='mm', res = 300)
 
 # Behavior and DPD vars are on 0:7 already
 dataPX53 <- data_daily_raw %>% 
@@ -1272,7 +1272,9 @@ dataPX53 %>%  ggplot(
   scale_color_manual(values= plotcolours53)
 # comparisons %>% filter( participantID %in% c(45)) %>% select(Rank1, Rank2)
 # passive , # dpds24 unusual
+dev.off()
 
+png("timeseries45.png", width = 300, height = 100, units='mm', res = 300)
 # Behavior and DPD vars are on 0:7 already
 dataPX45 <- data_daily_raw %>% 
 filter( participantID==45, day.response %in% 1:100) %>%
